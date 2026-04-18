@@ -5,6 +5,7 @@
     "dev": "node --watch src/index.js",
     "db:generate": "npx @better-auth/cli generate --yes",
     "db:migrate": "npx @better-auth/cli migrate --yes",
+    "fallow": "fallow",
     "prettier:check": "prettier --check '**/*.{js,css,md,yml}'",
     "prettier:write": "prettier --write '**/*.{js,css,md,yml}'",
     "lint": "eslint .",
@@ -28,6 +29,7 @@
     "@commitlint/config-conventional": "^20.5.0",
     "@eslint/js": "^10.0.1",
     "eslint": "^10.2.0",
+    "fallow": "^2.40.3",
     "globals": "^17.4.0",
     "prettier": "^3.8.1",
     "tap": "^21.6.3"
