@@ -115,23 +115,9 @@ export async function getTestInstance() {
       });
     } catch (error) {
       // magicLinkVerify may throw an APIError with the redirect response
-      // Extract the headers from the error if it's a 302 redirect
-      if (error.statusCode === 302) {
-        // error.headers is a Map-like object from Headers
-        let setCookie;
-        if (error.headers && typeof error.headers.get === "function") {
-          setCookie = error.headers.get("set-cookie");
-        } else if (error.headers && Array.isArray(error.headers)) {
-          // If it's an array of tuples
-          const setCookieHeader = error.headers.find(
-            (h) => h[0].toLowerCase() === "set-cookie",
-          );
-          setCookie = setCookieHeader ? setCookieHeader[1] : null;
-        }
-
-        if (setCookie) {
-          return parseSessionCookie(setCookie);
-        }
+      const cookieFromError = extractCookieFromError(error);
+      if (cookieFromError) {
+        return cookieFromError;
       }
       throw new Error(`Magic link verification failed: ${error.message}`, {
         cause: error,
@@ -157,6 +143,33 @@ export async function getTestInstance() {
     getAuthHeaders,
     getMagicLinks: () => auth._testMagicLinks || [],
   };
+}
+
+/**
+ * Extract session cookie from a 302 redirect error response
+ * @param {Error} error - The error thrown by magicLinkVerify
+ * @returns {{cookie: string}|null} Session cookie object or null if not found
+ */
+function extractCookieFromError(error) {
+  if (error.statusCode !== 302) {
+    return null;
+  }
+
+  let setCookie;
+  if (error.headers && typeof error.headers.get === "function") {
+    setCookie = error.headers.get("set-cookie");
+  } else if (error.headers && Array.isArray(error.headers)) {
+    const setCookieHeader = error.headers.find(
+      (h) => h[0].toLowerCase() === "set-cookie",
+    );
+    setCookie = setCookieHeader ? setCookieHeader[1] : null;
+  }
+
+  if (setCookie) {
+    return parseSessionCookie(setCookie);
+  }
+
+  return null;
 }
 
 /**
