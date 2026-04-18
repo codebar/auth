@@ -40,7 +40,45 @@ export async function getTestInstance() {
   const client = createTestClient(auth);
 
   // Helper to get session headers for authenticated requests via magic link
-  const getAuthHeaders = async (email) => {
+  const getAuthHeaders = createGetAuthHeaders(auth, magicLinksStore);
+
+  return {
+    auth,
+    client,
+    db,
+    getAuthHeaders,
+    getMagicLinks: () => magicLinksStore,
+  };
+}
+
+/**
+ * Creates a test client helper with admin operations
+ * @param {Object} auth - Better Auth instance
+ * @returns {Object} Client helper object with admin methods
+ */
+function createTestClient(auth) {
+  return {
+    // Admin methods (based on spike findings)
+    admin: {
+      setRole: async ({ userId, role }) => {
+        // Based on spike findings: direct database UPDATE is required
+        // The admin.setRole endpoint requires authentication, so direct DB access is simpler for testing
+        const db = auth.options?.database;
+        if (!db) throw new Error("Cannot access database for role update");
+        db.prepare("UPDATE user SET role = ? WHERE id = ?").run(role, userId);
+      },
+    },
+  };
+}
+
+/**
+ * Creates a function to get authentication headers for test requests
+ * @param {Object} auth - Better Auth instance
+ * @param {Array} magicLinksStore - Array storing captured magic links
+ * @returns {Function} Async function that takes an email and returns auth headers
+ */
+function createGetAuthHeaders(auth, magicLinksStore) {
+  return async function getAuthHeaders(email) {
     // Send magic link
     await auth.api.signInMagicLink({
       body: {
@@ -90,34 +128,6 @@ export async function getTestInstance() {
     }
 
     return parseSessionCookie(setCookie);
-  };
-
-  return {
-    auth,
-    client,
-    db,
-    getAuthHeaders,
-    getMagicLinks: () => magicLinksStore,
-  };
-}
-
-/**
- * Creates a test client helper with admin operations
- * @param {Object} auth - Better Auth instance
- * @returns {Object} Client helper object with admin methods
- */
-function createTestClient(auth) {
-  return {
-    // Admin methods (based on spike findings)
-    admin: {
-      setRole: async ({ userId, role }) => {
-        // Based on spike findings: direct database UPDATE is required
-        // The admin.setRole endpoint requires authentication, so direct DB access is simpler for testing
-        const db = auth.options?.database;
-        if (!db) throw new Error("Cannot access database for role update");
-        db.prepare("UPDATE user SET role = ? WHERE id = ?").run(role, userId);
-      },
-    },
   };
 }
 
