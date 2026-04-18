@@ -27,9 +27,118 @@ import Database from "better-sqlite3";
 export async function getTestInstance() {
   // Create in-memory database
   const db = new Database(":memory:");
+  const magicLinksStore = [];
 
   // Configure Better Auth for testing
-  const auth = betterAuth({
+  const auth = createTestAuth(db, magicLinksStore);
+
+  // Run migrations to create database tables
+  const migrations = await getMigrations(auth.options);
+  await migrations.runMigrations();
+
+  // Create client helper for common operations
+  const client = createTestClient(auth);
+
+  // Helper to get session headers for authenticated requests via magic link
+  const getAuthHeaders = createGetAuthHeaders(auth, magicLinksStore);
+
+  return {
+    auth,
+    client,
+    db,
+    getAuthHeaders,
+    getMagicLinks: () => magicLinksStore,
+  };
+}
+
+/**
+ * Creates a test client helper with admin operations
+ * @param {Object} auth - Better Auth instance
+ * @returns {Object} Client helper object with admin methods
+ */
+function createTestClient(auth) {
+  return {
+    // Admin methods (based on spike findings)
+    admin: {
+      setRole: async ({ userId, role }) => {
+        // Based on spike findings: direct database UPDATE is required
+        // The admin.setRole endpoint requires authentication, so direct DB access is simpler for testing
+        const db = auth.options?.database;
+        if (!db) throw new Error("Cannot access database for role update");
+        db.prepare("UPDATE user SET role = ? WHERE id = ?").run(role, userId);
+      },
+    },
+  };
+}
+
+/**
+ * Creates a function to get authentication headers for test requests
+ * @param {Object} auth - Better Auth instance
+ * @param {Array} magicLinksStore - Array storing captured magic links
+ * @returns {Function} Async function that takes an email and returns auth headers
+ */
+function createGetAuthHeaders(auth, magicLinksStore) {
+  return async function getAuthHeaders(email) {
+    // Send magic link
+    await auth.api.signInMagicLink({
+      body: {
+        email,
+        callbackURL: "http://localhost:3000/profile",
+      },
+      headers: new Headers(),
+    });
+
+    // Get the magic link from the test array
+    const magicLink = magicLinksStore.find((link) => link.email === email);
+
+    if (!magicLink) {
+      throw new Error(`No magic link found for ${email}`);
+    }
+
+    // Verify the magic link to get a session
+    // magicLinkVerify returns a 302 redirect with session cookie headers
+    let result;
+    try {
+      result = await auth.api.magicLinkVerify({
+        query: {
+          token: magicLink.token,
+          callbackURL: "http://localhost:3000/profile",
+        },
+        headers: new Headers(),
+        returnHeaders: true,
+      });
+    } catch (error) {
+      // magicLinkVerify may throw an APIError with the redirect response
+      const cookieFromError = extractCookieFromError(error);
+      if (cookieFromError) {
+        return cookieFromError;
+      }
+      throw new Error(`Magic link verification failed: ${error.message}`, {
+        cause: error,
+      });
+    }
+
+    if (!result.headers) {
+      throw new Error("No headers returned from magic link verification");
+    }
+
+    const setCookie = result.headers.get("set-cookie");
+    if (!setCookie) {
+      throw new Error("No session cookie in magic link verification response");
+    }
+
+    return parseSessionCookie(setCookie);
+  };
+}
+
+/**
+ * Creates a Better Auth instance configured for testing
+ * @param {Database} db - better-sqlite3 database instance
+ * @param {Array} magicLinksStore - External array to store captured magic links
+ * @returns {Object} Configured Better Auth instance
+ */
+function createTestAuth(db, magicLinksStore) {
+  return betterAuth({
     database: db,
     baseURL: "http://localhost:3000",
     logger: {
@@ -53,127 +162,58 @@ export async function getTestInstance() {
         sendMagicLink: async ({ email, token, url }) => {
           // Store magic link for testing
           // Tests can access this via the returned magicLinks array
-          if (!auth._testMagicLinks) {
-            auth._testMagicLinks = [];
-          }
-          auth._testMagicLinks.push({ email, token, url });
+          magicLinksStore.push({ email, token, url });
           return Promise.resolve();
         },
       }),
       admin(),
     ],
   });
+}
 
-  // Run migrations to create database tables
-  const migrations = await getMigrations(auth.options);
-  await migrations.runMigrations();
+/**
+ * Extract session cookie from a 302 redirect error response
+ * @param {Error} error - The error thrown by magicLinkVerify
+ * @returns {{cookie: string}|null} Session cookie object or null if not found
+ */
+function extractCookieFromError(error) {
+  if (error.statusCode !== 302) {
+    return null;
+  }
 
-  // Create client helper for common operations
-  const client = {
-    // Admin methods (based on spike findings)
-    admin: {
-      setRole: async ({ userId, role }) => {
-        // Based on spike findings: direct database UPDATE is required
-        // The admin.setRole endpoint requires authentication, so direct DB access is simpler for testing
-        const db = auth.options?.database;
-        if (!db) throw new Error("Cannot access database for role update");
-        db.prepare("UPDATE user SET role = ? WHERE id = ?").run(role, userId);
-      },
-    },
-  };
-
-  // Helper to get session headers for authenticated requests via magic link
-  const getAuthHeaders = async (email) => {
-    // Send magic link
-    await auth.api.signInMagicLink({
-      body: {
-        email,
-        callbackURL: "http://localhost:3000/profile",
-      },
-      headers: new Headers(),
-    });
-
-    // Get the magic link from the test array
-    const magicLinks = auth._testMagicLinks || [];
-    const magicLink = magicLinks.find((link) => link.email === email);
-
-    if (!magicLink) {
-      throw new Error(`No magic link found for ${email}`);
-    }
-
-    // Verify the magic link to get a session
-    // magicLinkVerify returns a 302 redirect with session cookie headers
-    let result;
-    try {
-      result = await auth.api.magicLinkVerify({
-        query: {
-          token: magicLink.token,
-          callbackURL: "http://localhost:3000/profile",
-        },
-        headers: new Headers(),
-        returnHeaders: true,
-      });
-    } catch (error) {
-      // magicLinkVerify may throw an APIError with the redirect response
-      // Extract the headers from the error if it's a 302 redirect
-      if (error.statusCode === 302) {
-        // error.headers is a Map-like object from Headers
-        let setCookie;
-        if (error.headers && typeof error.headers.get === "function") {
-          setCookie = error.headers.get("set-cookie");
-        } else if (error.headers && Array.isArray(error.headers)) {
-          // If it's an array of tuples
-          const setCookieHeader = error.headers.find(
-            (h) => h[0].toLowerCase() === "set-cookie",
-          );
-          setCookie = setCookieHeader ? setCookieHeader[1] : null;
-        }
-
-        if (setCookie) {
-          // Parse cookie to extract session token
-          const cookies = setCookie.split(",").map((c) => c.trim());
-          const sessionCookie = cookies.find((c) =>
-            c.startsWith("better-auth.session_token"),
-          );
-
-          if (sessionCookie) {
-            return { cookie: sessionCookie.split(";")[0] };
-          }
-        }
-      }
-      throw new Error(`Magic link verification failed: ${error.message}`, {
-        cause: error,
-      });
-    }
-
-    if (!result.headers) {
-      throw new Error("No headers returned from magic link verification");
-    }
-
-    const setCookie = result.headers.get("set-cookie");
-    if (!setCookie) {
-      throw new Error("No session cookie in magic link verification response");
-    }
-
-    // Parse cookie to extract session token
-    const cookies = setCookie.split(",").map((c) => c.trim());
-    const sessionCookie = cookies.find((c) =>
-      c.startsWith("better-auth.session_token"),
+  let setCookie;
+  if (error.headers && typeof error.headers.get === "function") {
+    setCookie = error.headers.get("set-cookie");
+  } else if (error.headers && Array.isArray(error.headers)) {
+    const setCookieHeader = error.headers.find(
+      (h) => h[0].toLowerCase() === "set-cookie",
     );
+    setCookie = setCookieHeader ? setCookieHeader[1] : null;
+  }
 
-    if (!sessionCookie) {
-      throw new Error("No session token cookie found");
-    }
+  if (setCookie) {
+    return parseSessionCookie(setCookie);
+  }
 
-    // Return just the cookie header value
-    return { cookie: sessionCookie.split(";")[0] };
-  };
+  return null;
+}
 
-  return {
-    auth,
-    client,
-    db,
-    getAuthHeaders,
-    getMagicLinks: () => auth._testMagicLinks || [],
-  };
+/**
+ * Parse a Set-Cookie header to extract the better-auth session token
+ * @param {string} setCookie - The Set-Cookie header value
+ * @returns {{cookie: string}} Object containing the cookie header value
+ * @throws {Error} If no session token cookie is found
+ */
+function parseSessionCookie(setCookie) {
+  const cookies = setCookie.split(",").map((c) => c.trim());
+  const sessionCookie = cookies.find((c) =>
+    c.startsWith("better-auth.session_token"),
+  );
+
+  if (!sessionCookie) {
+    throw new Error("No session token cookie found");
+  }
+
+  // Return just the cookie header value (before the semicolon)
+  return { cookie: sessionCookie.split(";")[0] };
 }
