@@ -2,21 +2,31 @@ import { test } from "tap";
 import { getTestInstance } from "../helpers/test-instance.js";
 import { createApp } from "../../src/app/app.js";
 
+/**
+ * Make a magic link request to the app
+ * @param {Object} app - Hono app instance
+ * @param {string} email - Email address for the magic link
+ * @returns {Promise<Response>} The response from the request
+ */
+async function makeMagicLinkRequest(app, email) {
+  const formData = new URLSearchParams();
+  formData.append("email", email);
+
+  return app.request("/login/magic-link", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: formData.toString(),
+  });
+}
+
 test("magic links feature tests", async (t) => {
   t.test("user can request magic link", async (t) => {
     const testInstance = await getTestInstance();
     const app = createApp(testInstance.auth);
 
-    const formData = new URLSearchParams();
-    formData.append("email", "magic@example.com");
-
-    const res = await app.request("/login/magic-link", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-    });
+    const res = await makeMagicLinkRequest(app, "magic@example.com");
 
     t.equal(res.status, 302, "redirects after requesting magic link");
     t.match(
@@ -30,16 +40,7 @@ test("magic links feature tests", async (t) => {
     const testInstance = await getTestInstance();
     const app = createApp(testInstance.auth);
 
-    const formData = new URLSearchParams();
-    formData.append("email", "nonexistent@example.com");
-
-    const res = await app.request("/login/magic-link", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-    });
+    const res = await makeMagicLinkRequest(app, "nonexistent@example.com");
 
     // Should still show success to prevent email enumeration
     t.equal(res.status, 302, "redirects after requesting magic link");
