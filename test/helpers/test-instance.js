@@ -27,42 +27,10 @@ import Database from "better-sqlite3";
 export async function getTestInstance() {
   // Create in-memory database
   const db = new Database(":memory:");
+  const magicLinksStore = [];
 
   // Configure Better Auth for testing
-  const auth = betterAuth({
-    database: db,
-    baseURL: "http://localhost:3000",
-    logger: {
-      disabled: true, // Suppress logs during tests
-    },
-    socialProviders: {
-      github: {
-        clientId: "test-client-id",
-        clientSecret: "test-client-secret",
-      },
-    },
-    telemetry: {
-      enabled: false,
-    },
-    session: {
-      expiresIn: 60 * 60 * 24 * 7, // 7 days
-      updateAge: 60 * 60 * 24, // 1 day
-    },
-    plugins: [
-      magicLink({
-        sendMagicLink: async ({ email, token, url }) => {
-          // Store magic link for testing
-          // Tests can access this via the returned magicLinks array
-          if (!auth._testMagicLinks) {
-            auth._testMagicLinks = [];
-          }
-          auth._testMagicLinks.push({ email, token, url });
-          return Promise.resolve();
-        },
-      }),
-      admin(),
-    ],
-  });
+  const auth = createTestAuth(db, magicLinksStore);
 
   // Run migrations to create database tables
   const migrations = await getMigrations(auth.options);
@@ -94,8 +62,7 @@ export async function getTestInstance() {
     });
 
     // Get the magic link from the test array
-    const magicLinks = auth._testMagicLinks || [];
-    const magicLink = magicLinks.find((link) => link.email === email);
+    const magicLink = magicLinksStore.find((link) => link.email === email);
 
     if (!magicLink) {
       throw new Error(`No magic link found for ${email}`);
@@ -141,8 +108,48 @@ export async function getTestInstance() {
     client,
     db,
     getAuthHeaders,
-    getMagicLinks: () => auth._testMagicLinks || [],
+    getMagicLinks: () => magicLinksStore,
   };
+}
+
+/**
+ * Creates a Better Auth instance configured for testing
+ * @param {Database} db - better-sqlite3 database instance
+ * @param {Array} magicLinksStore - External array to store captured magic links
+ * @returns {Object} Configured Better Auth instance
+ */
+function createTestAuth(db, magicLinksStore) {
+  return betterAuth({
+    database: db,
+    baseURL: "http://localhost:3000",
+    logger: {
+      disabled: true, // Suppress logs during tests
+    },
+    socialProviders: {
+      github: {
+        clientId: "test-client-id",
+        clientSecret: "test-client-secret",
+      },
+    },
+    telemetry: {
+      enabled: false,
+    },
+    session: {
+      expiresIn: 60 * 60 * 24 * 7, // 7 days
+      updateAge: 60 * 60 * 24, // 1 day
+    },
+    plugins: [
+      magicLink({
+        sendMagicLink: async ({ email, token, url }) => {
+          // Store magic link for testing
+          // Tests can access this via the returned magicLinks array
+          magicLinksStore.push({ email, token, url });
+          return Promise.resolve();
+        },
+      }),
+      admin(),
+    ],
+  });
 }
 
 /**
