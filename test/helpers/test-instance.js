@@ -130,15 +130,7 @@ export async function getTestInstance() {
         }
 
         if (setCookie) {
-          // Parse cookie to extract session token
-          const cookies = setCookie.split(",").map((c) => c.trim());
-          const sessionCookie = cookies.find((c) =>
-            c.startsWith("better-auth.session_token"),
-          );
-
-          if (sessionCookie) {
-            return { cookie: sessionCookie.split(";")[0] };
-          }
+          return parseSessionCookie(setCookie);
         }
       }
       throw new Error(`Magic link verification failed: ${error.message}`, {
@@ -155,18 +147,7 @@ export async function getTestInstance() {
       throw new Error("No session cookie in magic link verification response");
     }
 
-    // Parse cookie to extract session token
-    const cookies = setCookie.split(",").map((c) => c.trim());
-    const sessionCookie = cookies.find((c) =>
-      c.startsWith("better-auth.session_token"),
-    );
-
-    if (!sessionCookie) {
-      throw new Error("No session token cookie found");
-    }
-
-    // Return just the cookie header value
-    return { cookie: sessionCookie.split(";")[0] };
+    return parseSessionCookie(setCookie);
   };
 
   return {
@@ -176,4 +157,24 @@ export async function getTestInstance() {
     getAuthHeaders,
     getMagicLinks: () => auth._testMagicLinks || [],
   };
+}
+
+/**
+ * Parse a Set-Cookie header to extract the better-auth session token
+ * @param {string} setCookie - The Set-Cookie header value
+ * @returns {{cookie: string}} Object containing the cookie header value
+ * @throws {Error} If no session token cookie is found
+ */
+function parseSessionCookie(setCookie) {
+  const cookies = setCookie.split(",").map((c) => c.trim());
+  const sessionCookie = cookies.find((c) =>
+    c.startsWith("better-auth.session_token"),
+  );
+
+  if (!sessionCookie) {
+    throw new Error("No session token cookie found");
+  }
+
+  // Return just the cookie header value (before the semicolon)
+  return { cookie: sessionCookie.split(";")[0] };
 }
