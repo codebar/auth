@@ -10,8 +10,8 @@ const server = serve(
     fetch: app.fetch,
     port: appConfig.port,
   },
-  (info) => {
-    console.log(`Server is running on http://${appConfig.host}:${info.port}`);
+  () => {
+    console.log(`Server is running on ${appConfig.base_url}`);
   },
 );
 

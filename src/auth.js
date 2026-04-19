@@ -37,7 +37,7 @@ export { db };
 
 export const auth = betterAuth({
   database: db,
-  baseURL: `http://${appConfig.host}:${appConfig.port}`,
+  baseURL: appConfig.base_url,
   logger: {
     disabled: false,
     level: "debug",
