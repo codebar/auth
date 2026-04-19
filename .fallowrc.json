@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
-  "entry": ["test/features/*.test.js"],
+  "entry": ["test/features/*.test.js", "test/unit/*.test.js"],
   "ignoreDependencies": ["pino"],
   "ignoreExports": [{ "file": "static/auth-client.js", "exports": ["*"] }]
 }

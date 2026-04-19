@@ -1,10 +1,14 @@
 import config from "../../config.js";
 
-/**
- * Checks if a redirect URL is valid (in the allowlist)
- * @param {string} redirectUrl - The URL to validate
- * @returns {boolean} - True if valid, false otherwise
- */
+const matchesGlob = (url, pattern) => {
+  if (!pattern.includes("*")) return false;
+  const escaped = pattern
+    .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*/g, ".*");
+  const regex = new RegExp(`^${escaped}$`);
+  return regex.test(url);
+};
+
 const isValidRedirectUrl = (redirectUrl) => {
   if (!redirectUrl || typeof redirectUrl !== "string") {
     return false;
@@ -15,7 +19,9 @@ const isValidRedirectUrl = (redirectUrl) => {
     return false;
   }
 
-  return config.allowed_redirects.includes(trimmed);
+  return config.allowed_redirects.some(
+    (pattern) => trimmed === pattern || matchesGlob(trimmed, pattern),
+  );
 };
 
 /**
