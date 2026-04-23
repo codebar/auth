@@ -15,9 +15,9 @@
     "test:coverage": "tap --coverage-report=html"
   },
   "dependencies": {
-    "@hono/node-server": "^1.19.13",
-    "better-auth": "^1.6.2",
-    "better-sqlite3": "^12.8.0",
+    "@hono/node-server": "^1.19.14",
+    "better-auth": "^1.6.5",
+    "better-sqlite3": "^12.9.0",
     "date-fns": "^4.1.0",
     "hono": "^4.12.14",
     "hono-pino": "^0.10.3",
@@ -30,9 +30,9 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.2.0",
     "fallow": "^2.40.3",
-    "globals": "^17.4.0",
-    "prettier": "^3.8.1",
+    "globals": "^17.5.0",
+    "prettier": "^3.8.3",
     "sinon": "^21.1.2",
-    "tap": "^21.6.3"
+    "tap": "^21.7.0"
   }
 }
