@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.0.0",
-    "better-auth": "^1.6.5",
+    "better-auth": "^1.6.8",
     "better-sqlite3": "^12.9.0",
     "date-fns": "^4.1.0",
     "hono": "^4.12.14",
@@ -28,11 +28,11 @@
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.2.0",
-    "fallow": "^2.40.3",
+    "eslint": "^10.2.1",
+    "fallow": "^2.46.0",
     "globals": "^17.5.0",
     "prettier": "^3.8.3",
     "sinon": "^21.1.2",
-    "tap": "^21.7.0"
+    "tap": "^21.7.1"
   }
 }
