@@ -15,24 +15,24 @@
     "test:coverage": "tap --coverage-report=html"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.0",
-    "better-auth": "^1.6.5",
+    "@hono/node-server": "^2.0.1",
+    "better-auth": "^1.6.9",
     "better-sqlite3": "^12.9.0",
     "date-fns": "^4.1.0",
-    "hono": "^4.12.14",
+    "hono": "^4.12.16",
     "hono-pino": "^0.10.3",
     "pg": "^8.20.0",
     "pino": "^10.3.1"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.5.0",
-    "@commitlint/config-conventional": "^20.5.0",
+    "@commitlint/cli": "^20.5.3",
+    "@commitlint/config-conventional": "^20.5.3",
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.2.0",
-    "fallow": "^2.40.3",
+    "eslint": "^10.2.1",
+    "fallow": "^2.56.0",
     "globals": "^17.5.0",
     "prettier": "^3.8.3",
     "sinon": "^21.1.2",
-    "tap": "^21.7.0"
+    "tap": "^21.7.1"
   }
 }
