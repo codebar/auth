@@ -1,6 +1,9 @@
 {
   "name": "auth-auth",
   "type": "module",
+  "engines": {
+    "node": ">= 24.0.0"
+  },
   "scripts": {
     "dev": "node --watch src/index.js",
     "db:generate": "npx @better-auth/cli generate --yes",

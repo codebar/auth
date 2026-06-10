@@ -33,6 +33,10 @@ Authentication/profile prototype for Codebar using [Better Auth](https://www.bet
    npm run dev
    ```
 
+## Deployment
+
+See [HEROKU.md](HEROKU.md) for Heroku deployment instructions.
+
 ## Development Commands
 
 **Running the app:**
