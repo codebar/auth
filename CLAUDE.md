@@ -35,7 +35,7 @@ Authentication/profile prototype for Codebar using [Better Auth](https://www.bet
 
 ## Deployment
 
-See [HEROKU.md](HEROKU.md) for Heroku deployment instructions.
+See [docs/heroku-setup.md](docs/heroku-setup.md) for initial Heroku setup and [docs/deployment.md](docs/deployment.md) for deployment instructions.
 
 ## Development Commands
 
