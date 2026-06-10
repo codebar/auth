@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -172,7 +172,7 @@ Use `elements-of-style:writing-clearly-and-concisely` skill when writing:
 
 - Commit messages (especially bodies and footers)
 - Pull request titles and descriptions
-- Documentation files (README, CLAUDE.md, etc.)
+- Documentation files (README, AGENTS.md, etc.)
 
 ## Architecture
 
