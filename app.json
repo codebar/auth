@@ -1,0 +1,44 @@
+{
+  "name": "Codebar Auth",
+  "description": "Authentication service for Codebar using Better Auth",
+  "repository": "https://github.com/codebar/auth",
+  "website": "https://auth.codebar.io",
+  "success_url": "/health",
+  "stack": "heroku-24",
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "addons": [
+    {
+      "plan": "heroku-postgresql:essential-0",
+      "as": "DATABASE"
+    }
+  ],
+  "env": {
+    "GITHUB_CLIENT_ID": {
+      "description": "GitHub OAuth App Client ID (create at https://github.com/settings/developers)",
+      "required": true
+    },
+    "GITHUB_CLIENT_SECRET": {
+      "description": "GitHub OAuth App Client Secret",
+      "required": true
+    },
+    "BETTER_AUTH_SECRET": {
+      "description": "Secret key for Better Auth session encryption",
+      "generator": "secret"
+    },
+    "CODEBAR_AUTH_URL": {
+      "description": "Base URL for auth service",
+      "value": "https://auth.codebar.io"
+    }
+  },
+
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ]
+}

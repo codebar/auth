@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -32,6 +32,10 @@ Authentication/profile prototype for Codebar using [Better Auth](https://www.bet
    npm run db:migrate
    npm run dev
    ```
+
+## Deployment
+
+See [docs/heroku-setup.md](docs/heroku-setup.md) for initial Heroku setup and [docs/deployment.md](docs/deployment.md) for deployment instructions.
 
 ## Development Commands
 
@@ -168,7 +172,7 @@ Use `elements-of-style:writing-clearly-and-concisely` skill when writing:
 
 - Commit messages (especially bodies and footers)
 - Pull request titles and descriptions
-- Documentation files (README, CLAUDE.md, etc.)
+- Documentation files (README, AGENTS.md, etc.)
 
 ## Architecture
 
