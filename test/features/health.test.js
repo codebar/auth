@@ -3,13 +3,52 @@ import sinon from "sinon";
 import { getTestInstance } from "../helpers/test-instance.js";
 import { createApp } from "../../src/app/app.js";
 
+/**
+ * Convenience: create a health-request function bound to an auth/pool pair
+ */
+function makeHealthRequest(auth, pool) {
+  const app = createApp(auth, pool);
+  return () => app.request("/health");
+}
+
+/**
+ * Assert standard RFC 9457 error fields on a 503 response body
+ */
+function assertProblemDetails(t, body) {
+  t.equal(body.type, "/problems/database-unavailable", "has RFC 9457 type");
+  t.equal(body.title, "Database Unavailable", "has RFC 9457 title");
+  t.equal(body.status, 503, "has RFC 9457 status");
+  t.ok(body.timestamp, "has timestamp");
+  t.ok(body.checks, "has checks extension");
+  t.equal(body.checks.app.status, "up", "app status is up");
+  t.equal(
+    body.checks.database.status,
+    "disconnected",
+    "database is disconnected",
+  );
+}
+
+/**
+ * Fetch /health and assert it returns a 503 RFC 9457 problem response
+ * @returns {Promise<Object>} parsed response body
+ */
+async function expect503Problem(t, auth, pool) {
+  const res = await makeHealthRequest(auth, pool)();
+  t.equal(res.status, 503, "returns 503 Service Unavailable");
+  t.match(
+    res.headers.get("content-type"),
+    /application\/problem\+json/,
+    "content-type is application/problem+json",
+  );
+  const body = await res.json();
+  assertProblemDetails(t, body);
+  return body;
+}
+
 test("health endpoint feature tests", async (t) => {
   t.test("GET /health returns 200 with healthy status", async (t) => {
-    const testInstance = await getTestInstance();
-    const app = createApp(testInstance.auth, testInstance.db);
-
-    const res = await app.request("/health");
-
+    const ti = await getTestInstance(t);
+    const res = await makeHealthRequest(ti.auth, ti.pool)();
     t.equal(res.status, 200, "returns 200 OK");
 
     const body = await res.json();
@@ -18,17 +57,16 @@ test("health endpoint feature tests", async (t) => {
     t.ok(body.checks, "has checks");
     t.equal(body.checks.app.status, "up", "app status is up");
     t.equal(body.checks.database.status, "connected", "database is connected");
-    t.ok(
-      ["sqlite", "postgresql"].includes(body.checks.database.type),
-      "database type is valid",
+    t.equal(
+      body.checks.database.type,
+      "postgresql",
+      "database type is postgresql",
     );
   });
 
   t.test("GET /health returns JSON with correct structure", async (t) => {
-    const testInstance = await getTestInstance();
-    const app = createApp(testInstance.auth, testInstance.db);
-
-    const res = await app.request("/health");
+    const ti = await getTestInstance(t);
+    const res = await makeHealthRequest(ti.auth, ti.pool)();
     const body = await res.json();
 
     t.ok(body.status, "has status field");
@@ -39,14 +77,16 @@ test("health endpoint feature tests", async (t) => {
     t.equal(body.checks.app.status, "up", "app status is up");
     t.ok(body.checks.database, "has checks.database field");
     t.equal(body.checks.database.status, "connected", "database is connected");
-    t.ok(body.checks.database.type, "has database type");
+    t.equal(
+      body.checks.database.type,
+      "postgresql",
+      "database type is postgresql",
+    );
   });
 
   t.test("timestamp is valid ISO 8601 format", async (t) => {
-    const testInstance = await getTestInstance();
-    const app = createApp(testInstance.auth, testInstance.db);
-
-    const res = await app.request("/health");
+    const ti = await getTestInstance(t);
+    const res = await makeHealthRequest(ti.auth, ti.pool)();
     const body = await res.json();
 
     const date = new Date(body.timestamp);
@@ -56,9 +96,8 @@ test("health endpoint feature tests", async (t) => {
   t.test(
     "GET /health?type=startup returns 200 with minimal checks",
     async (t) => {
-      const testInstance = await getTestInstance();
-      const app = createApp(testInstance.auth, testInstance.db);
-
+      const ti = await getTestInstance(t);
+      const app = createApp(ti.auth, ti.pool);
       const res = await app.request("/health?type=startup");
 
       t.equal(res.status, 200, "returns 200 OK");
@@ -75,118 +114,47 @@ test("health endpoint failure states", async (t) => {
   t.test(
     "returns 503 with RFC 9457 format when database query fails",
     async (t) => {
-      // Create fake db - test instance uses SQLite (has .prepare(), no .query())
-      const fakeGet = sinon.fake.throws(new Error("database is locked"));
-      const fakePrepare = sinon.fake.returns({
-        get: fakeGet,
+      const fakeQuery = sinon.fake.rejects(new Error("database is locked"));
+      const ti = await getTestInstance(t);
+      const body = await expect503Problem(t, ti.auth, {
+        query: fakeQuery,
       });
-      const fakeDb = {
-        prepare: fakePrepare,
-      };
 
-      // Create app with injected fake database
-      const testInstance = await getTestInstance();
-      const app = createApp(testInstance.auth, fakeDb);
-
-      const res = await app.request("/health");
-
-      t.equal(res.status, 503, "returns 503 Service Unavailable");
-      t.match(
-        res.headers.get("content-type"),
-        /application\/problem\+json/,
-        "content-type is application/problem+json",
-      );
-
-      const body = await res.json();
-      t.equal(body.type, "/problems/database-unavailable", "has RFC 9457 type");
-      t.equal(body.title, "Database Unavailable", "has RFC 9457 title");
-      t.equal(body.status, 503, "has RFC 9457 status");
       t.ok(body.detail, "has RFC 9457 detail");
-      t.ok(body.timestamp, "has timestamp");
-      t.ok(body.checks, "has checks extension");
-      t.equal(body.checks.app.status, "up", "app status is up");
-      t.equal(
-        body.checks.database.status,
-        "disconnected",
-        "database is disconnected",
-      );
-
-      // Verify specific error message for SQLite
       t.match(
         body.checks.database.message,
         /database is locked/,
         "error message matches expected",
       );
-
-      // Verify appropriate fake was called
-      t.ok(fakePrepare.calledOnce, "prepare was called");
-      t.ok(fakeGet.calledOnce, "get was called");
+      t.ok(fakeQuery.calledOnce, "query was called");
     },
   );
 
-  t.test(
-    "returns 503 with RFC 9457 format on generic database error",
-    async (t) => {
-      // Create fake db that throws error (SQLite pattern)
-      const fakeDb = {
-        prepare: () => {
-          throw new Error("database connection failed");
-        },
-      };
+  t.test("returns 503 with generic database error", async (t) => {
+    const fakeDb = {
+      query: async () => {
+        throw new Error("database connection failed");
+      },
+    };
 
-      // Create app with injected fake database
-      const testInstance = await getTestInstance();
-      const app = createApp(testInstance.auth, fakeDb);
+    const ti = await getTestInstance(t);
+    const body = await expect503Problem(t, ti.auth, fakeDb);
 
-      const res = await app.request("/health");
-
-      t.equal(res.status, 503, "returns 503 Service Unavailable");
-      t.match(
-        res.headers.get("content-type"),
-        /application\/problem\+json/,
-        "content-type is application/problem+json",
-      );
-
-      const body = await res.json();
-      t.equal(body.type, "/problems/database-unavailable", "has RFC 9457 type");
-      t.equal(body.title, "Database Unavailable", "has RFC 9457 title");
-      t.equal(body.status, 503, "has RFC 9457 status");
-      t.ok(body.timestamp, "has timestamp");
-      t.ok(body.checks, "has checks extension");
-      t.equal(body.checks.app.status, "up", "app status is up");
-
-      // Verify specific error message for SQLite
-      t.match(
-        body.detail,
-        /database connection failed/,
-        "error detail matches expected for sqlite",
-      );
-    },
-  );
+    t.match(
+      body.detail,
+      /database connection failed/,
+      "error detail matches expected from fake",
+    );
+  });
 
   t.test("returns 503 when database is null", async (t) => {
-    // Create app with null database
-    const testInstance = await getTestInstance();
-    const app = createApp(testInstance.auth, null);
+    const ti = await getTestInstance(t);
+    const body = await expect503Problem(t, ti.auth, null);
 
-    const res = await app.request("/health");
-
-    t.equal(res.status, 503, "returns 503 Service Unavailable");
-
-    const body = await res.json();
-    t.equal(body.type, "/problems/database-unavailable", "has RFC 9457 type");
-    t.equal(body.title, "Database Unavailable", "has RFC 9457 title");
-    t.equal(body.status, 503, "has RFC 9457 status");
     t.equal(
       body.detail,
       "Database connection is not available",
       "detail says database not available",
-    );
-    t.equal(body.checks.app.status, "up", "app status is up");
-    t.equal(
-      body.checks.database.status,
-      "disconnected",
-      "database is disconnected",
     );
     t.equal(
       body.checks.database.message,
@@ -196,24 +164,10 @@ test("health endpoint failure states", async (t) => {
   });
 
   t.test("returns 503 when PostgreSQL-style db query fails", async (t) => {
-    // Create fake db that has .query() method (PostgreSQL-style)
     const fakeQuery = sinon.fake.rejects(new Error("connection refused"));
-    const fakeDb = {
-      query: fakeQuery,
-    };
+    const ti = await getTestInstance(t);
+    const body = await expect503Problem(t, ti.auth, { query: fakeQuery });
 
-    const testInstance = await getTestInstance();
-    const app = createApp(testInstance.auth, fakeDb);
-
-    const res = await app.request("/health");
-
-    t.equal(res.status, 503, "returns 503 Service Unavailable");
-    const body = await res.json();
-    t.equal(
-      body.checks.database.status,
-      "disconnected",
-      "database is disconnected",
-    );
     t.match(
       body.checks.database.message,
       /connection refused/,

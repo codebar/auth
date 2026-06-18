@@ -4,7 +4,7 @@ import { createApp } from "../../src/app/app.js";
 
 test("authentication feature tests", async (t) => {
   t.test("user can logout", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth);
     const { getAuthHeaders } = testInstance;
 

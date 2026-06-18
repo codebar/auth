@@ -9,10 +9,6 @@ healthHandler.get("/health", async (c) => {
   // Get database from context (allows injection for testing)
   const db = c.get("db");
 
-  // Determine database type by checking object capabilities
-  // PostgreSQL/Kysely has .query(), better-sqlite3 has .prepare()
-  const isPostgres = typeof db?.query === "function";
-
   // Check for Heroku startup health check (skip DB check for fast startup)
   const isStartupCheck = c.req.query("type") === "startup";
 
@@ -55,13 +51,7 @@ healthHandler.get("/health", async (c) => {
     }
 
     // Check database connectivity
-    if (isPostgres) {
-      // PostgreSQL: use pool query
-      await db.query("SELECT 1");
-    } else {
-      // SQLite: use prepare/get
-      db.prepare("SELECT 1").get();
-    }
+    await db.query("SELECT 1");
 
     return c.json(
       {
@@ -72,7 +62,7 @@ healthHandler.get("/health", async (c) => {
           app: { status: "up" },
           database: {
             status: "connected",
-            type: isPostgres ? "postgresql" : "sqlite",
+            type: "postgresql",
           },
         },
       },

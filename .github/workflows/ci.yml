@@ -82,8 +82,6 @@ jobs:
           npm run prettier:check
           npm run lint
           npm run fallow
-          npm run db:generate
-          npm run db:migrate
 
   test:
     needs:

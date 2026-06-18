@@ -23,7 +23,7 @@ async function makeMagicLinkRequest(app, email) {
 
 test("magic links feature tests", async (t) => {
   t.test("user can request magic link", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth);
 
     const res = await makeMagicLinkRequest(app, "magic@example.com");
@@ -37,7 +37,7 @@ test("magic links feature tests", async (t) => {
   });
 
   t.test("magic link request for nonexistent user succeeds", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth);
 
     const res = await makeMagicLinkRequest(app, "nonexistent@example.com");
@@ -52,7 +52,7 @@ test("magic links feature tests", async (t) => {
   });
 
   t.test("magic link GET page renders form", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth);
 
     const res = await app.request("/login/magic-link");
@@ -64,7 +64,7 @@ test("magic links feature tests", async (t) => {
   });
 
   t.test("magic link URL is captured in test", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth);
     const { getMagicLinks } = testInstance;
 

@@ -1,5 +1,6 @@
 files:
   - "test/**/*.test.js"
+jobs: 1
 timeout: 30
 coverage-report:
   - "text"
