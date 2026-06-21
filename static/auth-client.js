@@ -2,7 +2,7 @@
 import { createAuthClient } from "https://esm.sh/better-auth@latest/client";
 
 export const authClient = createAuthClient({
-  baseURL: "http://localhost:3000",
+  baseURL: window.location.origin,
   plugins: [],
 });
 
