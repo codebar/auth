@@ -9,6 +9,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run `npm run prettier:check` to verify formatting
 - Run `npm run prettier:write` to auto-format files
 
+**Optional commit hooks:**
+
+To automatically run Prettier and ESLint before each commit, enable the hooks:
+
+```sh
+npm run hooks:install
+```
+
+This installs Git hooks that run `lint-staged` on commit. To skip the hooks for a single commit, use `git commit --no-verify`.
+
 ## Project Overview
 
 Authentication/profile prototype for Codebar using [Better Auth](https://www.better-auth.com/). A Node.js application built with Hono framework, SQLite database, and Better Auth for authentication flows.
