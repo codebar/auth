@@ -7,6 +7,7 @@ import appConfig from "./config.js";
 const db = new Pool({
   connectionString: appConfig.database_url,
   max: 10,
+  ssl: { rejectUnauthorized: false },
 });
 
 db.on("error", (err) => {
@@ -38,13 +39,42 @@ export const auth = betterAuth({
   },
   plugins: [
     magicLink({
-      // eslint-disable-next-line no-unused-vars -- request is currently unused in this demo
-      sendMagicLink: async ({ email, token, url }, request) => {
-        console.log(`Magic Link for ${email}: ${url}`);
-        console.log(`Token: ${token}`);
-        console.log("---");
-        // Return a resolved promise since we're just logging
-        return Promise.resolve();
+      sendMagicLink: async ({ email, url }) => {
+        const apiKey = process.env.SENDGRID_API_KEY;
+        const fromEmail =
+          process.env.MAGIC_LINK_FROM_EMAIL || "auth-noreply@codebar.io";
+
+        if (!apiKey) {
+          console.log(`Magic Link for ${email}: ${url}`);
+          return;
+        }
+
+        try {
+          const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              personalizations: [{ to: [{ email }] }],
+              from: { email: fromEmail },
+              subject: "Sign in to codebar",
+              content: [
+                {
+                  type: "text/plain",
+                  value: `Click the link below to sign in to codebar:\n\n${url}\n\nThis link expires in 5 minutes.`,
+                },
+              ],
+            }),
+          });
+
+          if (!res.ok) {
+            console.error(`SendGrid error: ${res.status} ${await res.text()}`);
+          }
+        } catch (err) {
+          console.error("Failed to send magic link:", err);
+        }
       },
     }),
     admin({

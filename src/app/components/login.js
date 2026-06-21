@@ -1,13 +1,13 @@
 import { html } from "hono/html";
 
 // GitHub login
-export const GitHubButton = ({ action = "signin", redirectUrl } = {}) => html`
+export const GitHubButton = ({ redirectUrl } = {}) => html`
   <h2>Using GitHub</h2>
   <button
     onclick="handleGitHubSignIn(event)"
     data-redirect-url="${redirectUrl || ""}"
   >
-    ${action === "signup" ? "Sign Up with GitHub" : "Sign In with GitHub"}
+    Sign In with GitHub
   </button>
 `;
 
