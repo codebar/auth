@@ -63,8 +63,8 @@ export function createApp(auth, injectedDb) {
     return next();
   });
 
-  // Better-auth API routes
-  app.on(["POST", "GET"], "/api/auth/*", (c) => {
+  // Better-auth API routes — ** matches any depth (e.g. /api/auth/sign-in/social)
+  app.on(["POST", "GET"], "/api/auth/**", (c) => {
     return auth.handler(c.req.raw);
   });
 
