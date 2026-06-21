@@ -13,6 +13,7 @@ if (isPostgres) {
   db = new Pool({
     connectionString: appConfig.database_url,
     max: 10, // reasonable pool size
+    ssl: { rejectUnauthorized: false },
   });
 
   db.on("error", (err) => {
