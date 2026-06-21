@@ -4,7 +4,7 @@ import { createApp } from "../../src/app/app.js";
 
 test("home page feature tests", async (t) => {
   t.test("home page loads without authentication", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth);
 
     const res = await app.request("/");
@@ -15,7 +15,7 @@ test("home page feature tests", async (t) => {
   });
 
   t.test("home page has login link", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth);
 
     const res = await app.request("/");

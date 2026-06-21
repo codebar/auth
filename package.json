@@ -5,7 +5,7 @@
     "node": ">= 24.0.0"
   },
   "scripts": {
-    "dev": "node --watch src/index.js",
+    "dev": "scripts/container.sh ensure && node --watch src/index.js",
     "db:generate": "npx @better-auth/cli generate --yes",
     "db:migrate": "npx @better-auth/cli migrate --yes",
     "fallow": "fallow",
@@ -13,14 +13,17 @@
     "prettier:write": "prettier --write '**/*.{js,css,md,yml}'",
     "lint": "eslint .",
     "start": "node src/index.js",
+    "pretest": "node test/helpers/container.js",
     "test": "tap",
     "test:watch": "tap --watch",
+    "test:pg:start": "scripts/container.sh start",
+    "test:pg:stop": "scripts/container.sh stop",
+    "test:pg:status": "scripts/container.sh status",
     "test:coverage": "tap --coverage-report=html"
   },
   "dependencies": {
     "@hono/node-server": "^2.0.4",
     "better-auth": "^1.6.16",
-    "better-sqlite3": "^12.10.0",
     "date-fns": "^4.4.0",
     "hono": "^4.12.25",
     "hono-pino": "^0.10.3",

@@ -1,39 +1,24 @@
+import { Pool } from "pg";
 import { betterAuth } from "better-auth";
 import { admin, magicLink } from "better-auth/plugins";
-import Database from "better-sqlite3";
-import { Pool } from "pg";
 import appConfig from "./config.js";
 
-// Detect database type from connection string
-const isPostgres = appConfig.database_url.startsWith("postgres://");
+// PostgreSQL connection pool for CI/production and local dev
+// SSL only for non-local connections (Heroku requires it; local/CI does not)
+const isLocal =
+  appConfig.database_url.includes("@localhost") ||
+  appConfig.database_url.includes("@127.0.0.1");
+const db = new Pool({
+  connectionString: appConfig.database_url,
+  max: 10,
+  ...(isLocal ? {} : { ssl: { rejectUnauthorized: false } }),
+});
 
-let db;
-if (isPostgres) {
-  // PostgreSQL for CI/production
-  db = new Pool({
-    connectionString: appConfig.database_url,
-    max: 10, // reasonable pool size
-    ssl: { rejectUnauthorized: false },
-  });
+db.on("error", (err) => {
+  console.error("Unexpected database error", err);
+  process.exit(-1);
+});
 
-  db.on("error", (err) => {
-    console.error("Unexpected database error", err);
-    process.exit(-1);
-  });
-} else {
-  // SQLite for local development
-  db = new Database(appConfig.database_url);
-
-  try {
-    db.pragma("busy_timeout = 5000");
-    db.pragma("synchronous = NORMAL");
-  } catch (e) {
-    console.error(`error occurred: ${e.message}`);
-    process.exit(-1);
-  }
-}
-
-// Export db for graceful shutdown
 export { db };
 
 export const auth = betterAuth({

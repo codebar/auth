@@ -1,2 +1,8 @@
 export GITHUB_CLIENT_ID=
 export GITHUB_CLIENT_SECRET=
+export DATABASE_URL=postgres://auth:auth@localhost:5433/test
+export AUTH_TEST_PG_HOST=localhost
+export AUTH_TEST_PG_PORT=5433
+export AUTH_TEST_PG_USER=auth
+export AUTH_TEST_PG_PASSWORD=auth
+export AUTH_TEST_PG_DB=test

@@ -1,71 +1,136 @@
+import pg from "pg";
 import { betterAuth } from "better-auth";
 import { admin, magicLink } from "better-auth/plugins";
 import { getMigrations } from "better-auth/db/migration";
-import Database from "better-sqlite3";
 
 /**
- * Creates a Better Auth test instance with in-memory database
- * Adapted from Better Auth's test utilities for use with tap
- *
- * EXPECTED ERROR MESSAGES DURING TESTS:
- *
- * You will see these errors in test output - they are EXPECTED and do NOT indicate test failures:
- *
- * 1. "INTERNAL_SERVER_ERROR SqliteError: no such table: session"
- *    - Occurs when tests provide invalid session tokens/cookies
- *    - Better Auth attempts to query the session table before catching the error
- *    - Tests verify the app correctly handles this (redirects to login)
- *
- * These errors are logged by Better Auth's internal error handling and cannot be
- * suppressed without hiding legitimate errors. They indicate the application is
- * correctly catching and handling error conditions.
- *
- * Tests pass if assertions succeed - ignore these stderr messages.
- *
- * @returns {Promise<{auth: Object, client: Object, db: Database}>}
+ * Parse DATABASE_URL into a pool config, falling back to defaults on failure
  */
-export async function getTestInstance() {
-  // Create in-memory database
-  const db = new Database(":memory:");
+function getPoolConfig() {
+  const {
+    AUTH_TEST_PG_HOST: host = "localhost",
+    AUTH_TEST_PG_PORT: port = "5433",
+    AUTH_TEST_PG_DB: database = "test",
+    AUTH_TEST_PG_USER: user = "auth",
+    AUTH_TEST_PG_PASSWORD: password = "auth",
+  } = process.env;
+
+  const cfg = { host, port: parseInt(port), database, user, password, max: 1 };
+
+  if (!process.env.DATABASE_URL) return cfg;
+
+  try {
+    const p = new URL(process.env.DATABASE_URL);
+    cfg.host = p.hostname || cfg.host;
+    cfg.port = parseInt(p.port) || cfg.port;
+    cfg.database = p.pathname.replace(/^\//, "") || cfg.database;
+    cfg.user = decodeURIComponent(p.username) || cfg.user;
+    cfg.password = decodeURIComponent(p.password) || cfg.password;
+  } catch {
+    /* keep defaults */
+  }
+
+  return cfg;
+}
+
+/**
+ * Creates a Better Auth test instance with isolated PostgreSQL schema
+ *
+ * @param {Object} t - Tap test context (for auto-teardown via t.teardown())
+ * @returns {Promise<{auth: Object, pool: pg.Pool, client: Object, getAuthHeaders: Function, teardown: Function}>}
+ */
+export async function getTestInstance(t) {
+  // Unique schema per test instance
+  const schemaName = `test_${crypto.randomUUID().replace(/-/g, "_")}`;
+
+  // Create a small pool for this test
+  const poolConfig = getPoolConfig();
+  const pool = new pg.Pool(poolConfig);
+
+  // Create the schema and set search_path so Better Auth tables go here
+  await pool.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
+  await pool.query(`SET search_path TO "${schemaName}"`);
+
+  // Store magic links for test retrieval
   const magicLinksStore = [];
 
-  // Configure Better Auth for testing
-  const auth = createTestAuth(db, magicLinksStore);
+  // Configure Better Auth with the pool as database
+  const auth = betterAuth({
+    database: pool,
+    baseURL: "http://localhost:3000",
+    logger: {
+      disabled: true,
+    },
+    socialProviders: {
+      github: {
+        clientId: "test-client-id",
+        clientSecret: "test-client-secret",
+      },
+    },
+    telemetry: {
+      enabled: false,
+    },
+    session: {
+      expiresIn: 60 * 60 * 24 * 7, // 7 days
+      updateAge: 60 * 60 * 24, // 1 day
+    },
+    plugins: [
+      magicLink({
+        sendMagicLink: async ({ email, token, url }) => {
+          magicLinksStore.push({ email, token, url });
+        },
+      }),
+      admin(),
+    ],
+  });
 
-  // Run migrations to create database tables
-  const migrations = await getMigrations(auth.options);
-  await migrations.runMigrations();
+  // Run Better Auth migrations inside the test's schema
+  const { runMigrations } = await getMigrations(auth.options);
+  await runMigrations();
 
-  // Create client helper for common operations
-  const client = createTestClient(auth);
-
-  // Helper to get session headers for authenticated requests via magic link
+  // Create helpers
   const getAuthHeaders = createGetAuthHeaders(auth, magicLinksStore);
+  const client = createTestClient(pool);
+
+  // Auto-teardown via tap context
+  if (t && typeof t.teardown === "function") {
+    t.teardown(async () => {
+      await pool.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
+      await pool.end();
+    });
+  }
 
   return {
     auth,
+    pool,
     client,
-    db,
     getAuthHeaders,
     getMagicLinks: () => magicLinksStore,
+    teardown: async () => {
+      try {
+        await pool.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
+      } catch {
+        // Ignore teardown errors
+      }
+      await pool.end();
+    },
   };
 }
 
 /**
  * Creates a test client helper with admin operations
- * @param {Object} auth - Better Auth instance
+ * @param {pg.Pool} pool
  * @returns {Object} Client helper object with admin methods
  */
-function createTestClient(auth) {
+function createTestClient(pool) {
   return {
-    // Admin methods (based on spike findings)
     admin: {
       setRole: async ({ userId, role }) => {
-        // Based on spike findings: direct database UPDATE is required
-        // The admin.setRole endpoint requires authentication, so direct DB access is simpler for testing
-        const db = auth.options?.database;
-        if (!db) throw new Error("Cannot access database for role update");
-        db.prepare("UPDATE user SET role = ? WHERE id = ?").run(role, userId);
+        // "user" is a reserved word, must be quoted
+        await pool.query('UPDATE "user" SET role = $1 WHERE id = $2', [
+          role,
+          userId,
+        ]);
       },
     },
   };
@@ -96,7 +161,6 @@ function createGetAuthHeaders(auth, magicLinksStore) {
     }
 
     // Verify the magic link to get a session
-    // magicLinkVerify returns a 302 redirect with session cookie headers
     let result;
     try {
       result = await auth.api.magicLinkVerify({
@@ -129,46 +193,6 @@ function createGetAuthHeaders(auth, magicLinksStore) {
 
     return parseSessionCookie(setCookie);
   };
-}
-
-/**
- * Creates a Better Auth instance configured for testing
- * @param {Database} db - better-sqlite3 database instance
- * @param {Array} magicLinksStore - External array to store captured magic links
- * @returns {Object} Configured Better Auth instance
- */
-function createTestAuth(db, magicLinksStore) {
-  return betterAuth({
-    database: db,
-    baseURL: "http://localhost:3000",
-    logger: {
-      disabled: true, // Suppress logs during tests
-    },
-    socialProviders: {
-      github: {
-        clientId: "test-client-id",
-        clientSecret: "test-client-secret",
-      },
-    },
-    telemetry: {
-      enabled: false,
-    },
-    session: {
-      expiresIn: 60 * 60 * 24 * 7, // 7 days
-      updateAge: 60 * 60 * 24, // 1 day
-    },
-    plugins: [
-      magicLink({
-        sendMagicLink: async ({ email, token, url }) => {
-          // Store magic link for testing
-          // Tests can access this via the returned magicLinks array
-          magicLinksStore.push({ email, token, url });
-          return Promise.resolve();
-        },
-      }),
-      admin(),
-    ],
-  });
 }
 
 /**

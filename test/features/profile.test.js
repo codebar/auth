@@ -4,7 +4,7 @@ import { createApp } from "../../src/app/app.js";
 
 test("profile feature tests", async (t) => {
   t.test("authenticated user can view profile", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth);
     const { getAuthHeaders } = testInstance;
 
@@ -17,7 +17,7 @@ test("profile feature tests", async (t) => {
   });
 
   t.test("unauthenticated user redirects to login", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth);
 
     const res = await app.request("/profile");
@@ -27,7 +27,7 @@ test("profile feature tests", async (t) => {
   });
 
   t.test("profile with invalid session redirects to login", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth);
 
     // Use invalid cookie

@@ -4,7 +4,7 @@ import { createApp } from "../../src/app/app.js";
 
 test("admin feature tests", async (t) => {
   t.test("admin page can be requested", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth);
 
     // For now, just test that the route exists and we can request it
@@ -18,7 +18,7 @@ test("admin feature tests", async (t) => {
   });
 
   t.test("unauthenticated user cannot access admin panel", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth);
 
     const res = await app.request("/admin");
@@ -30,18 +30,18 @@ test("admin feature tests", async (t) => {
   });
 
   t.test("admin role can be set on a user via magic link auth", async (t) => {
-    const testInstance = await getTestInstance();
-    const { getAuthHeaders, client } = testInstance;
+    const testInstance = await getTestInstance(t);
+    const { getAuthHeaders, client, pool } = testInstance;
 
     // Get a user session via magic link
     await getAuthHeaders("admin@example.com");
 
     // Query the user from the database to get their ID
-    const db = testInstance.auth.options?.database;
-    if (!db) throw new Error("Cannot access database");
-    const user = db
-      .prepare("SELECT id FROM user WHERE email = ?")
-      .get("admin@example.com");
+    // "user" is a reserved word, must be quoted in Postgres
+    const result = await pool.query('SELECT id FROM "user" WHERE email = $1', [
+      "admin@example.com",
+    ]);
+    const user = result.rows[0];
 
     if (!user) {
       throw new Error("User not found after magic link verification");
@@ -53,8 +53,7 @@ test("admin feature tests", async (t) => {
       role: "admin",
     });
 
-    // We can't directly query the user from a different instance,
-    // but setRole should not throw if it worked correctly
+    // setRole should not throw if it worked correctly
     t.pass("admin role successfully set");
   });
 });
