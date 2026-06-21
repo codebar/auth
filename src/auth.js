@@ -60,7 +60,8 @@ export const auth = betterAuth({
     magicLink({
       sendMagicLink: async ({ email, url }) => {
         const apiKey = process.env.SENDGRID_API_KEY;
-        const fromEmail = process.env.MAGIC_LINK_FROM_EMAIL || "auth-noreply@codebar.io";
+        const fromEmail =
+          process.env.MAGIC_LINK_FROM_EMAIL || "auth-noreply@codebar.io";
 
         if (!apiKey) {
           console.log(`Magic Link for ${email}: ${url}`);
