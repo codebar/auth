@@ -11,12 +11,19 @@ One-time setup for deploying codebar-auth to Heroku.
 ## Create the Heroku App
 
 ```bash
-# Create app from app.json (provisions dyno, database, and env vars)
-heroku create codebar-auth-production --manifest
+# Create app in EU region
+heroku create codebar-auth-production --region eu
 
-# Set GitHub OAuth credentials
-heroku config:set GITHUB_CLIENT_ID=your_client_id
-heroku config:set GITHUB_CLIENT_SECRET=your_client_secret
+# app.json is NOT read by `heroku create`, so provision everything manually:
+heroku stack:set heroku-26 -a codebar-auth-production
+heroku addons:create heroku-postgresql:essential-0 --as DATABASE -a codebar-auth-production
+
+# Set required GitHub OAuth credentials
+heroku config:set GITHUB_CLIENT_ID=your_client_id -a codebar-auth-production
+heroku config:set GITHUB_CLIENT_SECRET=your_client_secret -a codebar-auth-production
+
+# Scale dyno (run after first deploy — requires Procfile to be registered)
+heroku ps:scale web=1:basic -a codebar-auth-production
 ```
 
 ## Connect GitHub Repository
@@ -34,6 +41,8 @@ The `main` branch is protected from direct pushes. Merge the infrastructure PR t
 
 Heroku deploys automatically when code merges to `main`. The release phase runs database migrations before dynos start.
 
+
+
 ## GitHub OAuth Configuration
 
 After deploying, update your GitHub OAuth app settings:
@@ -47,7 +56,7 @@ After deploying, update your GitHub OAuth app settings:
 | ------------ | --------------------------------- |
 | **Dyno**     | Basic (always-on)                 |
 | **Database** | Heroku Postgres Essential-0 (1GB) |
-| **Stack**    | heroku-24                         |
+| **Stack**    | heroku-26                         |
 | **Node.js**  | >= 24.0.0                         |
 
 ## Environment Variables
