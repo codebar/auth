@@ -57,11 +57,6 @@ http {
     server_name _;
     keepalive_timeout 5;
 
-    # Force HTTPS
-    if ($http_x_forwarded_proto != "https") {
-      return 301 https://$host$request_uri;
-    }
-
     # Reject exploit bots
     if ($bad_bot) {
       return 444;
