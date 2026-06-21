@@ -9,7 +9,7 @@ export default new Hono().get("/", async (c) => {
     Layout({
       title: "Auth Demo",
       children: html`
-        <h1>Authentication Demo</h1>
+        <h1>codebar authentication</h1>
         ${LoginStatus({ user })}
       `,
     }),
