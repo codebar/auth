@@ -41,8 +41,6 @@ The `main` branch is protected from direct pushes. Merge the infrastructure PR t
 
 Heroku deploys automatically when code merges to `main`. The release phase runs database migrations before dynos start.
 
-
-
 ## GitHub OAuth Configuration
 
 After deploying, update your GitHub OAuth app settings:
