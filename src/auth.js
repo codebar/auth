@@ -10,10 +10,14 @@ const isPostgres = appConfig.database_url.startsWith("postgres://");
 let db;
 if (isPostgres) {
   // PostgreSQL for CI/production
+  // SSL only for non-local connections (Heroku requires it; local/CI does not)
+  const isLocal =
+    appConfig.database_url.includes("@localhost") ||
+    appConfig.database_url.includes("@127.0.0.1");
   db = new Pool({
     connectionString: appConfig.database_url,
     max: 10, // reasonable pool size
-    ssl: { rejectUnauthorized: false },
+    ...(isLocal ? {} : { ssl: { rejectUnauthorized: false } }),
   });
 
   db.on("error", (err) => {
