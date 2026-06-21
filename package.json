@@ -24,7 +24,6 @@
   "dependencies": {
     "@hono/node-server": "^2.0.4",
     "better-auth": "^1.6.16",
-    "better-sqlite3": "^12.10.0",
     "date-fns": "^4.4.0",
     "hono": "^4.12.25",
     "hono-pino": "^0.10.3",
