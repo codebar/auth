@@ -14,6 +14,6 @@ export const LoginStatus = ({ user }) => html`
       `
     : html`
         <div class="pico-background-red-50">❌ Not logged in</div>
-        <a href="/login">Sign In</a> | <a href="/signup">Sign Up</a>
+        <a href="/login">Sign In</a>
       `}
 `;
