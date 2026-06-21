@@ -21,7 +21,7 @@ export const Layout = ({ title, children }) => html`
       <header></header>
       <main class="container">${children}</main>
       <footer></footer>
-      <script type="module" src="/static/auth-client.js"></script>
+      <script type="module" src="/static/auth-client.js?v=2"></script>
     </body>
   </html>
 `;
