@@ -3,6 +3,8 @@
 # nginx takes $PORT, app takes $((PORT + 1))
 set -e
 
+mkdir -p logs/nginx
+
 APP_PORT=$((PORT + 1))
 
 # Render nginx config with the real PORT
