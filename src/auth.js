@@ -4,10 +4,14 @@ import { admin, magicLink } from "better-auth/plugins";
 import appConfig from "./config.js";
 
 // PostgreSQL connection pool for CI/production and local dev
+// SSL only for non-local connections (Heroku requires it; local/CI does not)
+const isLocal =
+  appConfig.database_url.includes("@localhost") ||
+  appConfig.database_url.includes("@127.0.0.1");
 const db = new Pool({
   connectionString: appConfig.database_url,
   max: 10,
-  ssl: { rejectUnauthorized: false },
+  ...(isLocal ? {} : { ssl: { rejectUnauthorized: false } }),
 });
 
 db.on("error", (err) => {
