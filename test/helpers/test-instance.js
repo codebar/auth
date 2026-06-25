@@ -1,7 +1,10 @@
 import pg from "pg";
 import { betterAuth } from "better-auth";
-import { admin, magicLink } from "better-auth/plugins";
+import { admin, magicLink, jwt } from "better-auth/plugins";
+import { oauthProvider } from "@better-auth/oauth-provider";
 import { getMigrations } from "better-auth/db/migration";
+import { seedPlannerClient } from "../../src/app/db/seed-client.js";
+import { AUTH_DEFAULT_PORT, PLANNER_DEFAULT_PORT } from "../../src/config.js";
 
 /**
  * Parse DATABASE_URL into a pool config, falling back to defaults on failure
@@ -57,7 +60,7 @@ export async function getTestInstance(t) {
   // Configure Better Auth with the pool as database
   const auth = betterAuth({
     database: pool,
-    baseURL: "http://localhost:3000",
+    baseURL: `http://localhost:${AUTH_DEFAULT_PORT}`,
     logger: {
       disabled: true,
     },
@@ -75,6 +78,24 @@ export async function getTestInstance(t) {
       updateAge: 60 * 60 * 24, // 1 day
     },
     plugins: [
+      jwt({
+        jwt: {
+          issuer: `http://localhost:${AUTH_DEFAULT_PORT}`,
+          audience: "planner",
+          expirationTime: "15m",
+          definePayload: (session) => ({
+            email: session.user.email,
+            name: session.user.name,
+          }),
+        },
+      }),
+      oauthProvider({
+        loginPage: "/login",
+        scopes: ["openid", "profile"],
+        accessTokenExpiresIn: 900,
+        validAudiences: ["planner"],
+        allowDynamicClientRegistration: false,
+      }),
       magicLink({
         sendMagicLink: async ({ email, token, url }) => {
           magicLinksStore.push({ email, token, url });
@@ -87,6 +108,13 @@ export async function getTestInstance(t) {
   // Run Better Auth migrations inside the test's schema
   const { runMigrations } = await getMigrations(auth.options);
   await runMigrations();
+
+  // Seed the planner OAuth client for testing
+  await seedPlannerClient(
+    pool,
+    `http://localhost:${PLANNER_DEFAULT_PORT}/auth/codebar/callback`,
+    schemaName,
+  );
 
   // Create helpers
   const getAuthHeaders = createGetAuthHeaders(auth, magicLinksStore);
@@ -102,6 +130,7 @@ export async function getTestInstance(t) {
 
   return {
     auth,
+    db: pool,
     pool,
     client,
     getAuthHeaders,
@@ -205,6 +234,8 @@ function extractCookieFromError(error) {
     return null;
   }
 
+  // ponytail: Better Auth returns headers in two shapes (Headers object vs
+  // array) depending on the error path. Handle both until the API stabilises.
   let setCookie;
   if (error.headers && typeof error.headers.get === "function") {
     setCookie = error.headers.get("set-cookie");

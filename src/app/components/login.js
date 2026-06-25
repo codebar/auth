@@ -1,21 +1,17 @@
 import { html } from "hono/html";
 
-// GitHub login
-export const GitHubButton = ({ redirectUrl } = {}) => html`
+export const GitHubButton = ({ callbackURL } = {}) => html`
   <h2>Using GitHub</h2>
-  <button
-    onclick="handleGitHubSignIn(event)"
-    data-redirect-url="${redirectUrl || ""}"
-  >
-    Sign In with GitHub
-  </button>
+  <form method="post" action="/login/github">
+    <input type="hidden" name="callbackURL" value="${callbackURL || ""}" />
+    <button type="submit">Sign In with GitHub</button>
+  </form>
 `;
 
-// Magic link button component
-export const MagicLinkButton = ({ redirectUrl } = {}) => html`
+export const MagicLinkButton = ({ callbackURL } = {}) => html`
   <h2>Using magic link</h2>
   <form method="get" action="/login/magic-link">
-    <input type="hidden" name="redirect_url" value="${redirectUrl}" />
+    <input type="hidden" name="callbackURL" value="${callbackURL || ""}" />
     <button type="submit">Send Magic Link</button>
   </form>
 `;

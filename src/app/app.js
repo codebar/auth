@@ -3,12 +3,14 @@ import { pinoLogger } from "hono-pino";
 import { serveStatic } from "@hono/node-server/serve-static";
 
 import { db } from "../auth.js";
+import appConfig from "../config.js";
 import authHandler from "./routes/auth.js";
 import healthHandler from "./routes/health.js";
 import homeHandler from "./routes/home.js";
 import profileHandler from "./routes/profile.js";
 import whoamiHandler from "./routes/whoami.js";
 import adminHandler from "./routes/admin.js";
+import testMagicLinksHandler from "./routes/test-magic-links.js";
 
 // demo
 import demoHandler from "./demo/routes.js";
@@ -63,8 +65,15 @@ export function createApp(auth, injectedDb) {
     return next();
   });
 
-  // Better-auth API routes — ** matches any depth (e.g. /api/auth/sign-in/social)
+  // Better-auth API and OAuth routes
   app.on(["POST", "GET"], "/api/auth/**", (c) => {
+    return auth.handler(c.req.raw);
+  });
+  // OAuth provider metadata endpoints
+  app.on(["GET", "HEAD"], "/.well-known/oauth-authorization-server", (c) => {
+    return auth.handler(c.req.raw);
+  });
+  app.on(["GET", "HEAD"], "/.well-known/openid-configuration", (c) => {
     return auth.handler(c.req.raw);
   });
 
@@ -98,6 +107,10 @@ export function createApp(auth, injectedDb) {
   app.route("/", adminHandler);
 
   app.route("/demo", demoHandler);
+
+  if (!appConfig.isProduction) {
+    app.route("/", testMagicLinksHandler);
+  }
 
   // serve assets, etc.
   app.use("/static/*", serveStatic({ root: "./" }));
