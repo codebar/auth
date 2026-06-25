@@ -6,7 +6,7 @@
 # - Easy extension for future release tasks (seeding, cache warming, etc.)
 set -e
 
-echo "Running database migrations..."
-npm run db:migrate
+echo "Running database migrations and seeding..."
+node scripts/migrate.js
 
 echo "Release phase complete!"
