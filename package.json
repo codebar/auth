@@ -25,10 +25,10 @@
   },
   "dependencies": {
     "@better-auth/oauth-provider": "^1.6.20",
-    "@hono/node-server": "^2.0.4",
+    "@hono/node-server": "^2.0.6",
     "better-auth": "^1.6.20",
     "date-fns": "^4.4.0",
-    "hono": "^4.12.25",
+    "hono": "^4.12.27",
     "hono-pino": "^0.10.3",
     "pg": "^8.21.0",
     "pino": "^10.3.1"
@@ -40,13 +40,13 @@
     ]
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.0.2",
+    "@commitlint/cli": "^21.1.0",
     "@commitlint/config-conventional": "^21.0.2",
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.61.0",
+    "@playwright/test": "^1.61.1",
     "eslint": "^10.4.1",
-    "fallow": "^2.92.1",
-    "globals": "^17.6.0",
+    "fallow": "^2.102.0",
+    "globals": "^17.7.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
     "prettier": "^3.8.4",
