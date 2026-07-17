@@ -1,5 +1,14 @@
 import { html } from "hono/html";
 
+// Derive a version stamp for cache-busting static assets.
+// HEROKU_SLUG_COMMIT is the deployed git SHA, set automatically by Heroku.
+// Falls back to SOURCE_VERSION (build-time env), then 'dev' for local.
+const STATIC_VERSION =
+  (process.env.HEROKU_SLUG_COMMIT || process.env.SOURCE_VERSION || "").slice(
+    0,
+    7,
+  ) || "dev";
+
 // Base layout component
 export const Layout = ({ title, children }) => html`
   <!DOCTYPE html>
@@ -21,7 +30,10 @@ export const Layout = ({ title, children }) => html`
       <header></header>
       <main class="container">${children}</main>
       <footer></footer>
-      <script type="module" src="/static/auth-client.js?v=2"></script>
+      <script
+        type="module"
+        src="/static/auth-client.js?v=${STATIC_VERSION}"
+      ></script>
     </body>
   </html>
 `;
