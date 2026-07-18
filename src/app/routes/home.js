@@ -7,11 +7,8 @@ export default new Hono().get("/", async (c) => {
   const user = c.get("user");
   return c.html(
     Layout({
-      title: "Auth Demo",
-      children: html`
-        <h1>codebar authentication</h1>
-        ${LoginStatus({ user })}
-      `,
+      title: "Home",
+      children: html`${LoginStatus({ user })}`,
     }),
   );
 });

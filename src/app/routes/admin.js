@@ -9,23 +9,9 @@ export default new Hono()
   .get("/admin", async (c) => {
     const auth = getAuthFromContext(c);
     const users = await auth.api.listUsers({
-      query: {
-        query: {
-          // searchValue: "some name",
-          // searchField: "name",
-          // searchOperator: "contains",
-          // limit: 100,
-          // offset: 100,
-          // sortBy: "name",
-          // sortDirection: "desc",
-          // filterField: "email",
-          // filterValue: "hello@example.com",
-          // filterOperator: "eq",
-        },
-      },
+      query: { query: {} },
       headers: c.req.raw.headers,
     });
-    console.log(users);
 
     const error = c.req.query("error");
     const success = c.req.query("success");
@@ -34,8 +20,10 @@ export default new Hono()
       Layout({
         title: "Admin",
         children: html`
-          <h1>Admin</h1>
-          <a href="/">Back to Home</a>
+          <h1 class="h3 mb-3 fw-semibold">Admin</h1>
+          <a href="/" class="btn btn-outline-secondary btn-sm mb-3"
+            >← Back to Home</a
+          >
 
           ${Message({ error, success })}
           ${UsersList({ users: users.users, total: users.total })}
@@ -50,10 +38,7 @@ export default new Hono()
 
     try {
       await auth.api.setRole({
-        body: {
-          userId,
-          role,
-        },
+        body: { userId, role },
         headers: c.req.raw.headers,
       });
 
