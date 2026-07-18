@@ -11,7 +11,7 @@ test("home page feature tests", async (t) => {
 
     t.equal(res.status, 200, "returns 200 OK");
     const html = await res.text();
-    t.match(html, /codebar authentication/i, "contains app title");
+    t.match(html, /Welcome to codebar/i, "contains app title");
   });
 
   t.test("home page has login link", async (t) => {
