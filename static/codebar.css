@@ -1,0 +1,84 @@
+/* codebar brand overrides for Bootstrap 5 */
+
+:root {
+  --cb-blue: #4bafff;
+  --cb-green: #19f3be;
+  --cb-magenta: #ff036a;
+}
+
+body {
+  font-weight: 300;
+  padding-top: 100px;
+}
+
+/* Primary button — Trust Blue (WCAG AA with white text) */
+.btn-cb-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #1a6cb3;
+  --bs-btn-border-color: #1a6cb3;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #145994;
+  --bs-btn-hover-border-color: #145994;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #0f4775;
+  --bs-btn-active-border-color: #0f4775;
+}
+
+/* Brand accent buttons — for admin/internal use only */
+.btn-cb-green {
+  --bs-btn-color: #000;
+  --bs-btn-bg: var(--cb-green);
+  --bs-btn-border-color: var(--cb-green);
+  --bs-btn-hover-color: #000;
+  --bs-btn-hover-bg: #0de0ae;
+  --bs-btn-hover-border-color: #0de0ae;
+  --bs-btn-active-color: #000;
+  --bs-btn-active-bg: #0ac49a;
+  --bs-btn-active-border-color: #0ac49a;
+}
+
+.btn-cb-magenta {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--cb-magenta);
+  --bs-btn-border-color: var(--cb-magenta);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #e0005a;
+  --bs-btn-hover-border-color: #e0005a;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #c0004d;
+  --bs-btn-active-border-color: #c0004d;
+}
+
+/* Alerts — tinted brand backgrounds, dark accessible text */
+.alert-cb-info {
+  --bs-alert-color: #1a4a7a;
+  --bs-alert-bg: #d9edff;
+  --bs-alert-border-color: #b3d9ff;
+}
+
+.alert-cb-success {
+  --bs-alert-color: #0a5c47;
+  --bs-alert-bg: #d1f9ee;
+  --bs-alert-border-color: #a3f3dd;
+}
+
+.alert-cb-error {
+  --bs-alert-color: #8a0036;
+  --bs-alert-bg: #ffccdd;
+  --bs-alert-border-color: #ff99bb;
+}
+
+/* Card header accent — magenta bottom border */
+.card-header-cb {
+  border-bottom: 3px solid var(--cb-magenta);
+}
+
+/* Welcome heading on home page */
+.display-welcome {
+  font-weight: 300;
+}
+
+/* Avoid content shift on auth-check (home page) */
+.auth-status {
+  min-height: 80px;
+}

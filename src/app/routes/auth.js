@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
 import { Layout, Navigation } from "../components/layout.js";
-import { Message, FormSection } from "../components/common.js";
+import { Message } from "../components/common.js";
 import { GitHubButton, MagicLinkButton } from "../components/login.js";
 import { getAuthFromContext } from "../utils/auth.js";
 import { logout } from "../handlers/logout.js";
@@ -17,14 +17,18 @@ function showLogin(c) {
     Layout({
       title: "Sign In",
       children: html`
-        <h1>Sign In</h1>
-        ${Navigation({ back: { href: "/", text: "Back to Home" } })}
-        ${Message({ error, success })}
-        ${FormSection({
-          children: html`
-            ${MagicLinkButton({ callbackURL })} ${GitHubButton({ callbackURL })}
-          `,
-        })}
+        <div class="row justify-content-center">
+          <div class="col-md-8 col-lg-6">
+            <h1 class="h3 mb-3 fw-semibold">Sign In</h1>
+            ${Navigation({ back: { href: "/", text: "Back to Home" } })}
+            <hr class="my-3" />
+            ${Message({ error, success })}
+            <div class="row g-3">
+              <div class="col-sm-6">${GitHubButton({ callbackURL })}</div>
+              <div class="col-sm-6">${MagicLinkButton({ callbackURL })}</div>
+            </div>
+          </div>
+        </div>
       `,
     }),
   );
@@ -37,28 +41,34 @@ function showMagicLinkForm(c) {
     Layout({
       title: "Magic Link Login",
       children: html`
-        <h1>Magic Link Login</h1>
-        ${Navigation({ back: { href: "/login", text: "Back to Login" } })}
-        ${Message({
-          error: c.req.query("error"),
-          success: c.req.query("success"),
-        })}
-        ${FormSection({
-          children: html`
+        <div class="row justify-content-center">
+          <div class="col-md-6 col-lg-5">
+            <h1 class="h3 mb-3 fw-semibold">Sign In</h1>
+            ${Navigation({ back: { href: "/login", text: "Back to Login" } })}
+            <hr class="my-3" />
+            ${Message({
+              error: c.req.query("error"),
+              success: c.req.query("success"),
+            })}
             <form method="post" action="/login/magic-link">
               <input type="hidden" name="callbackURL" value="${callbackURL}" />
-              <fieldset>
+              <div class="mb-3">
+                <label for="email" class="form-label">Email address</label>
                 <input
                   type="email"
+                  class="form-control"
+                  id="email"
                   name="email"
-                  placeholder="Enter your email"
+                  placeholder="you@example.com"
                   required
                 />
-              </fieldset>
-              <button type="submit">Send Magic Link</button>
+              </div>
+              <button type="submit" class="btn btn-cb-primary w-100">
+                Send magic link
+              </button>
             </form>
-          `,
-        })}
+          </div>
+        </div>
       `,
     }),
   );
@@ -85,7 +95,7 @@ async function sendMagicLink(c) {
 async function startGitHubOAuth(c) {
   const auth = getAuthFromContext(c);
   const body = await c.req.parseBody();
-  const { callbackURL } = body;
+  const callbackURL = body.callbackURL || "/";
 
   const data = await auth.api.signInSocial({
     body: { provider: "github", callbackURL },

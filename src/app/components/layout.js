@@ -1,40 +1,70 @@
 import { html } from "hono/html";
-
-// Derive a version stamp for cache-busting static assets.
-// HEROKU_RELEASE_VERSION is set by Heroku when runtime-dyno-metadata is enabled.
-// Falls back to 'dev' for local development.
-const STATIC_VERSION = process.env.HEROKU_RELEASE_VERSION || "dev";
+import { STATIC_VERSION } from "../version.js";
 
 // Base layout component
-export const Layout = ({ title, children }) => html`
+export const Layout = ({ title, children, hideNav }) => html`
   <!DOCTYPE html>
-  <html>
+  <html data-bs-theme="auto">
     <head>
-      <title>${title}</title>
+      <title>codebar Auth — ${title}</title>
       <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <meta name="color-scheme" content="light dark" />
       <link
         rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+        href="/static/bootstrap.min.css?v=${STATIC_VERSION}"
       />
-      <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css"
-      />
+      <link rel="stylesheet" href="/static/codebar.css?v=${STATIC_VERSION}" />
     </head>
     <body>
-      <header></header>
-      <main class="container">${children}</main>
-      <footer></footer>
+      ${
+        !hideNav
+          ? html`
+              <nav
+                class="navbar navbar-expand-lg navbar-light bg-white fixed-top py-3"
+              >
+                <div class="container">
+                  <a
+                    class="navbar-brand border-0 d-flex align-items-center gap-2"
+                    href="/"
+                  >
+                    <img
+                      src="/static/codebar-logo.png?v=${STATIC_VERSION}"
+                      alt="codebar logo"
+                      width="200"
+                      height="54"
+                    />
+                    <span
+                      class="fw-semibold text-muted"
+                      style="font-size: 0.85rem;"
+                      >auth</span
+                    >
+                  </a>
+                </div>
+              </nav>
+            `
+          : ""
+      }
+      <main class="container py-4">${children}</main>
       <script
         type="module"
         src="/static/auth-client.js?v=${STATIC_VERSION}"
       ></script>
+      <script src="/static/bootstrap.bundle.min.js?v=${STATIC_VERSION}"></script>
     </body>
   </html>
 `;
+
 // Navigation component
 export const Navigation = ({ back, extra }) => html`
-  <a href="${back.href}">← ${back.text}</a>
-  ${extra ? html` | <a href="${extra.href}">${extra.text}</a>` : ""}
+  <a href="${back.href}" class="btn btn-outline-secondary btn-sm"
+    >← ${back.text}</a
+  >
+  ${
+    extra
+      ? html`<a
+          href="${extra.href}"
+          class="btn btn-outline-secondary btn-sm ms-1"
+          >${extra.text}</a
+        >`
+      : ""
+  }
 `;

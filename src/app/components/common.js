@@ -1,21 +1,25 @@
 import { html } from "hono/html";
 
-// Form section wrapper
-export const FormSection = ({ children }) => html` <div>${children}</div> `;
-
 // Message display component
-export const Message = ({ error, success }) => html`
+export const Message = ({ error, success, info } = {}) => html`
   ${
     error
-      ? html`<div class="pico-background-red-50">
+      ? html`<div class="alert alert-cb-error mb-3">
           ${decodeURIComponent(error)}
         </div>`
       : ""
   }
   ${
     success
-      ? html`<div class="pico-background-green-50">
+      ? html`<div class="alert alert-cb-success mb-3">
           ${decodeURIComponent(success)}
+        </div>`
+      : ""
+  }
+  ${
+    info
+      ? html`<div class="alert alert-cb-info mb-3">
+          ${decodeURIComponent(info)}
         </div>`
       : ""
   }

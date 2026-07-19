@@ -15,7 +15,7 @@
   </li>
 </ul>
 
-<div class="status" id="status"></div>
+<div class="status alert" id="status"></div>
 
 <script>
   try {
@@ -30,13 +30,13 @@
         const status = document.getElementById("status");
         status.innerHTML = `<pre>${JSON.stringify(user, null, 2)}</pre>`;
         if (user.role == "guest") {
-          status.classList.remove("pico-background-green-50");
-          status.classList.add("pico-background-red-50");
-          status.innerHTML += `<a href="/login?redirect_url=http://localhost:3000/demo">Login here!</a>`;
+          status.classList.remove("alert-cb-success");
+          status.classList.add("alert-cb-error");
+          status.innerHTML += `<a href="/login?redirect_url=http://localhost:3000/demo" class="alert-link">Login here!</a>`;
         } else {
-          status.classList.remove("pico-background-red-50");
-          status.classList.add("pico-background-green-50");
-          status.innerHTML += `<a href="/logout?redirect_url=http://localhost:3000/demo">Logout!</a>`;
+          status.classList.remove("alert-cb-error");
+          status.classList.add("alert-cb-success");
+          status.innerHTML += `<a href="/logout?redirect_url=http://localhost:3000/demo" class="alert-link">Logout!</a>`;
         }
       });
     });
