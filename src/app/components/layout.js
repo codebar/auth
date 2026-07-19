@@ -1,13 +1,9 @@
 import { html } from "hono/html";
 
 // Derive a version stamp for cache-busting static assets.
-// HEROKU_SLUG_COMMIT is the deployed git SHA, set automatically by Heroku.
-// Falls back to SOURCE_VERSION (build-time env), then 'dev' for local.
-const STATIC_VERSION =
-  (process.env.HEROKU_SLUG_COMMIT || process.env.SOURCE_VERSION || "").slice(
-    0,
-    7,
-  ) || "dev";
+// HEROKU_RELEASE_VERSION is set by Heroku when runtime-dyno-metadata is enabled.
+// Falls back to 'dev' for local development.
+const STATIC_VERSION = process.env.HEROKU_RELEASE_VERSION || "dev";
 
 // Base layout component
 export const Layout = ({ title, children }) => html`

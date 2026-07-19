@@ -16,6 +16,7 @@ heroku create codebar-auth-production --region eu
 
 # app.json is NOT read by `heroku create`, so provision everything manually:
 heroku stack:set heroku-26 -a codebar-auth-production
+heroku labs:enable runtime-dyno-metadata -a codebar-auth-production
 heroku addons:create heroku-postgresql:essential-0 --as DATABASE -a codebar-auth-production
 
 # Set required GitHub OAuth credentials
@@ -59,14 +60,15 @@ After deploying, update your GitHub OAuth app settings:
 
 ## Environment Variables
 
-| Variable               | Source           | Description                  |
-| ---------------------- | ---------------- | ---------------------------- |
-| `DATABASE_URL`         | Auto-provisioned | PostgreSQL connection string |
-| `GITHUB_CLIENT_ID`     | Required         | GitHub OAuth client ID       |
-| `GITHUB_CLIENT_SECRET` | Required         | GitHub OAuth client secret   |
-| `BETTER_AUTH_SECRET`   | Auto-generated   | Session encryption key       |
-| `CODEBAR_AUTH_URL`     | Auto-set         | Application base URL         |
-| `PORT`                 | Heroku           | Dyno port                    |
+| Variable                 | Source                | Description                        |
+| ------------------------ | --------------------- | ---------------------------------- |
+| `DATABASE_URL`           | Auto-provisioned      | PostgreSQL connection string       |
+| `GITHUB_CLIENT_ID`       | Required              | GitHub OAuth client ID             |
+| `GITHUB_CLIENT_SECRET`   | Required              | GitHub OAuth client secret         |
+| `BETTER_AUTH_SECRET`     | Auto-generated        | Session encryption key             |
+| `CODEBAR_AUTH_URL`       | Auto-set              | Application base URL               |
+| `PORT`                   | Heroku                | Dyno port                          |
+| `HEROKU_RELEASE_VERSION` | runtime-dyno-metadata | Static asset cache-busting version |
 
 ## Files
 
