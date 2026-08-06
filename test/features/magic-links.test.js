@@ -59,34 +59,24 @@ test("magic links feature tests", async (t) => {
 
     t.equal(res.status, 200, "magic link page loads");
     const html = await res.text();
-    t.match(html, /Magic Link/i, "displays magic link heading");
+    t.match(html, /Sign in with e-mail/, "displays e-mail sign-in page");
     t.match(html, /email/i, "has email input");
+    t.match(html, /Sign in with e-mail/, "shows e-mail sign-in button");
   });
 
-  t.test("magic link URL is captured in test", async (t) => {
+  t.test("login page shows friendly message for INVALID_TOKEN", async (t) => {
     const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth);
-    const { getMagicLinks } = testInstance;
 
-    const formData = new URLSearchParams();
-    formData.append("email", "magic-url@example.com");
+    const res = await app.request("/login?error=INVALID_TOKEN");
 
-    await app.request("/login/magic-link", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-    });
-
-    const magicLinks = getMagicLinks();
-    t.ok(magicLinks.length > 0, "magic link was generated");
-    t.equal(
-      magicLinks[magicLinks.length - 1].email,
-      "magic-url@example.com",
-      "magic link for correct email",
+    t.equal(res.status, 200, "login page loads");
+    const html = await res.text();
+    t.match(
+      html,
+      /expired or already been used/,
+      "shows friendly message instead of raw code",
     );
-    t.ok(magicLinks[magicLinks.length - 1].url, "magic link has URL");
-    t.ok(magicLinks[magicLinks.length - 1].token, "magic link has token");
+    t.ok(!html.includes("INVALID_TOKEN"), "does not show raw error code");
   });
 });

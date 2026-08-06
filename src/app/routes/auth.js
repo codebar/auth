@@ -6,12 +6,14 @@ import { GitHubButton, MagicLinkButton } from "../components/login.js";
 import { getAuthFromContext } from "../utils/auth.js";
 import { logout } from "../handlers/logout.js";
 import { getCallbackURL } from "../utils/callback-url.js";
+import { friendlyError } from "../utils/friendly-error.js";
 import appConfig from "../../config.js";
 
 function showLogin(c) {
   const error = c.req.query("error");
   const success = c.req.query("success");
   const callbackURL = getCallbackURL(c);
+  const friendly = error ? friendlyError(decodeURIComponent(error)) : null;
 
   return c.html(
     Layout({
@@ -22,7 +24,7 @@ function showLogin(c) {
             <h1 class="h3 mb-3 fw-semibold">Sign In</h1>
             ${Navigation({ back: { href: "/", text: "Back to Home" } })}
             <hr class="my-3" />
-            ${Message({ error, success })}
+            ${Message({ error: friendly, success })}
             <div class="row g-3">
               <div class="col-sm-6">${GitHubButton({ callbackURL })}</div>
               <div class="col-sm-6">${MagicLinkButton({ callbackURL })}</div>
@@ -36,10 +38,12 @@ function showLogin(c) {
 
 function showMagicLinkForm(c) {
   const callbackURL = c.req.query("callbackURL") || getCallbackURL(c);
+  const error = c.req.query("error");
+  const friendly = error ? friendlyError(decodeURIComponent(error)) : null;
 
   return c.html(
     Layout({
-      title: "Magic Link Login",
+      title: "Sign in with e-mail",
       children: html`
         <div class="row justify-content-center">
           <div class="col-md-6 col-lg-5">
@@ -47,7 +51,7 @@ function showMagicLinkForm(c) {
             ${Navigation({ back: { href: "/login", text: "Back to Login" } })}
             <hr class="my-3" />
             ${Message({
-              error: c.req.query("error"),
+              error: friendly,
               success: c.req.query("success"),
             })}
             <form method="post" action="/login/magic-link">
@@ -64,7 +68,7 @@ function showMagicLinkForm(c) {
                 />
               </div>
               <button type="submit" class="btn btn-cb-primary w-100">
-                Send magic link
+                Sign in with e-mail
               </button>
             </form>
           </div>
@@ -83,7 +87,7 @@ async function sendMagicLink(c) {
     body: {
       email,
       callbackURL,
-      errorCallbackURL: `${appConfig.base_url}/login?error=${encodeURIComponent("The magic link has expired or already been used")}`,
+      errorCallbackURL: `${appConfig.base_url}/login`,
     },
     headers: c.req.raw.headers,
   });
