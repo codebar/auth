@@ -5,6 +5,12 @@ export const buildMagicLinkPayload = ({ email, url, fromEmail, subject }) => ({
   personalizations: [{ to: [{ email }] }],
   from: { email: fromEmail },
   subject,
+  tracking_settings: {
+    // Magic-link URL must read as the real codebar.io link,
+    // not a Sendgrid /LsClick tracking redirect.
+    click_tracking: { enable: false },
+    open_tracking: { enable: false },
+  },
   content: [
     {
       type: "text/plain",
