@@ -13,7 +13,7 @@ export const MagicLinkButton = ({ callbackURL } = {}) => html`
   <form method="get" action="/login/magic-link">
     <input type="hidden" name="callbackURL" value="${callbackURL || ""}" />
     <button type="submit" class="btn btn-cb-primary w-100">
-      Send magic link
+      Sign in with e-mail
     </button>
   </form>
 `;

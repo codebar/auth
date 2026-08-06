@@ -59,8 +59,9 @@ test("magic links feature tests", async (t) => {
 
     t.equal(res.status, 200, "magic link page loads");
     const html = await res.text();
-    t.match(html, /Magic Link/i, "displays magic link heading");
+    t.match(html, /Sign in with e-mail/, "displays e-mail sign-in page");
     t.match(html, /email/i, "has email input");
+    t.match(html, /Sign in with e-mail/, "shows e-mail sign-in button");
   });
 
   t.test("login page shows friendly message for INVALID_TOKEN", async (t) => {

@@ -28,7 +28,7 @@ test("OAuth 2.1 magic link flow", async ({ page, request }) => {
   await expect(page).toHaveURL(/\/login/);
 
   // Click through to the magic link form
-  await page.getByRole("button", { name: /Send Magic Link/i }).click();
+  await page.getByRole("button", { name: /Sign in with e-mail/i }).click();
   await expect(page).toHaveURL(/\/login\/magic-link/);
 
   // Submit email
