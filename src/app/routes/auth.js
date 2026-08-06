@@ -43,7 +43,7 @@ function showMagicLinkForm(c) {
 
   return c.html(
     Layout({
-      title: "Magic Link Login",
+      title: "Sign in with e-mail",
       children: html`
         <div class="row justify-content-center">
           <div class="col-md-6 col-lg-5">
@@ -68,7 +68,7 @@ function showMagicLinkForm(c) {
                 />
               </div>
               <button type="submit" class="btn btn-cb-primary w-100">
-                Send magic link
+                Sign in with e-mail
               </button>
             </form>
           </div>
