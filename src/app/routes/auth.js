@@ -87,7 +87,7 @@ async function sendMagicLink(c) {
     body: {
       email,
       callbackURL,
-      errorCallbackURL: `${appConfig.base_url}/login?error=${encodeURIComponent("The magic link has expired or already been used")}`,
+      errorCallbackURL: `${appConfig.base_url}/login`,
     },
     headers: c.req.raw.headers,
   });
