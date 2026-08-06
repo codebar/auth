@@ -4,6 +4,7 @@ import { admin, magicLink, jwt } from "better-auth/plugins";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import appConfig from "./config.js";
 import { devMagicLinks } from "./dev/magic-links.js";
+import { buildMagicLinkPayload } from "./app/utils/magic-link-email.js";
 
 // PostgreSQL connection pool for CI/production and local dev
 // SSL only for non-local connections (Heroku requires it; local/CI does not)
@@ -103,17 +104,14 @@ export const auth = betterAuth({
               Authorization: `Bearer ${apiKey}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              personalizations: [{ to: [{ email }] }],
-              from: { email: fromEmail },
-              subject: "Sign in to codebar",
-              content: [
-                {
-                  type: "text/plain",
-                  value: `Click the link below to sign in to codebar:\n\n${url}\n\nThis link expires in 5 minutes.`,
-                },
-              ],
-            }),
+            body: JSON.stringify(
+              buildMagicLinkPayload({
+                email,
+                url,
+                fromEmail,
+                subject: "Sign in to codebar",
+              }),
+            ),
           });
 
           if (!res.ok) {
