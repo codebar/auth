@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { admin, magicLink, jwt } from "better-auth/plugins";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import appConfig from "./config.js";
+import { getGithubUserInfo } from "./auth/github-provider.js";
 import { devMagicLinks } from "./dev/magic-links.js";
 import { buildMagicLinkPayload } from "./app/utils/magic-link-email.js";
 
@@ -35,6 +36,9 @@ export const auth = betterAuth({
     github: {
       clientId: appConfig.social.github.id,
       clientSecret: appConfig.social.github.secret,
+      // Resolve the account email from /user/emails (primary + verified) so
+      // returning GitHub users match their existing planner accounts.
+      getUserInfo: getGithubUserInfo,
     },
   },
   telemetry: {
