@@ -39,6 +39,11 @@ export const auth = betterAuth({
       // Resolve the account email from /user/emails (primary + verified) so
       // returning GitHub users match their existing planner accounts.
       getUserInfo: getGithubUserInfo,
+      // Re-derive the stored email from the provider on every sign-in so users
+      // who linked BEFORE getUserInfo shipped (with their old public-email
+      // address) self-heal to the primary instead of staying bound to a
+      // duplicate planner account.
+      overrideUserInfoOnSignIn: true,
     },
   },
   telemetry: {
