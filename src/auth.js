@@ -4,6 +4,7 @@ import { admin, magicLink, jwt } from "better-auth/plugins";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import appConfig from "./config.js";
 import { getGithubUserInfo } from "./auth/github-provider.js";
+import { getGithubAccountId } from "./auth/id-token-claims.js";
 import { devMagicLinks } from "./dev/magic-links.js";
 import { buildMagicLinkPayload } from "./app/utils/magic-link-email.js";
 
@@ -82,6 +83,10 @@ export const auth = betterAuth({
       accessTokenExpiresIn: 900, // 15 minutes
       validAudiences: ["planner"],
       allowDynamicClientRegistration: false,
+      customIdTokenClaims: async ({ user }) => {
+        const githubId = await getGithubAccountId(db, user.id);
+        return githubId ? { github_id: String(githubId) } : {};
+      },
     }),
     magicLink({
       sendMagicLink: async ({ email, url }) => {
