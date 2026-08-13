@@ -52,6 +52,6 @@
     "prettier": "^3.9.6",
     "sinon": "^22.1.0",
     "tap": "^21.7.5",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
