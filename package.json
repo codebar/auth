@@ -28,9 +28,9 @@
     "@hono/node-server": "^2.1.0",
     "better-auth": "^1.6.20",
     "date-fns": "^4.4.0",
-    "hono": "^4.13.0",
+    "hono": "^4.13.1",
     "hono-pino": "^0.10.3",
-    "pg": "^8.21.0",
+    "pg": "^8.23.0",
     "pino": "^10.3.1"
   },
   "lint-staged": {
@@ -40,13 +40,13 @@
     ]
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.2.1",
+    "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.0.2",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
-    "eslint": "^10.8.0",
-    "fallow": "^3.14.0",
-    "globals": "^17.9.0",
+    "eslint": "^10.8.1",
+    "fallow": "^3.15.0",
+    "globals": "^17.11.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.3.0",
     "prettier": "^3.9.6",
