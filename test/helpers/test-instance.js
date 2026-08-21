@@ -4,6 +4,7 @@ import { admin, magicLink, jwt } from "better-auth/plugins";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import { getMigrations } from "better-auth/db/migration";
 import { seedPlannerClient } from "../../src/app/db/seed-client.js";
+import { getGithubAccountId } from "../../src/auth/id-token-claims.js";
 import { AUTH_DEFAULT_PORT, PLANNER_DEFAULT_PORT } from "../../src/config.js";
 
 /**
@@ -95,6 +96,10 @@ export async function getTestInstance(t) {
         accessTokenExpiresIn: 900,
         validAudiences: ["planner"],
         allowDynamicClientRegistration: false,
+        customIdTokenClaims: async ({ user }) => {
+          const githubId = await getGithubAccountId(pool, user.id);
+          return githubId ? { github_id: String(githubId) } : {};
+        },
       }),
       magicLink({
         sendMagicLink: async ({ email, token, url }) => {
