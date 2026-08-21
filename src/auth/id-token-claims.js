@@ -11,8 +11,8 @@
  */
 export async function getGithubAccountId(db, userId) {
   const result = await db.query(
-    'SELECT "accountId" FROM "account" WHERE "userId" = $1 AND "providerId" = $2 LIMIT 1',
-    [userId, "github"],
+    'SELECT "accountId" FROM "account" WHERE "userId" = $1 AND "providerId" = \'github\' LIMIT 1',
+    [userId],
   );
 
   return result.rows[0]?.accountId ?? null;
