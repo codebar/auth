@@ -38,6 +38,52 @@ jobs:
         if: github.event_name == 'pull_request'
         run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
+  nginx-edge-config:
+    name: "Nginx edge config"
+    needs:
+      - commitlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Render ERB config
+        run: PORT=3000 ruby -rerb -e 'File.write("nginx-rendered.conf", ERB.new(File.read("config/nginx.conf.erb")).result)'
+
+      - name: Syntax check rendered config
+        run: docker run --rm --entrypoint nginx -v "$PWD/nginx-rendered.conf:/etc/nginx/nginx.conf:ro" nginx:alpine -t -c /etc/nginx/nginx.conf
+
+      # limit_req allows burst 20 immediately; the matrix below stays under it.
+      - name: Smoke test location matching
+        run: |
+          docker run --rm -d --entrypoint nginx --name nginx-smoke -p 3000:3000 -v "$PWD/nginx-rendered.conf:/etc/nginx/nginx.conf:ro" nginx:alpine -c /etc/nginx/nginx.conf
+          for i in $(seq 1 30); do
+            curl -A 'Mozilla/5.0 (X11; Linux x86_64)' -s -o /dev/null http://127.0.0.1:3000/ && break
+            sleep 0.5
+          done
+          fail=0
+          # Scanner junk must 404 at the edge
+          for path in /.env /.env.local /.env.production /.git/config /key.pem /wp-login /backup /Dockerfile /__vite_rsc_findSourceMapURL /nested/whatever.conf; do
+            code=$(curl -A 'Mozilla/5.0 (X11; Linux x86_64)' -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3000$path")
+            if [ "$code" != "404" ]; then
+              echo "FAIL: $path expected 404, got $code"
+              fail=1
+            fi
+          done
+          # Legitimate paths must not be edge-blocked. There is no app
+          # upstream in this container, so anything other than an edge 404
+          # (typically 502) proves the request was passed through.
+          for path in /static/auth-client.js /static/codebar.css /login /health /api/auth/get-session /; do
+            code=$(curl -A 'Mozilla/5.0 (X11; Linux x86_64)' -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3000$path")
+            if [ "$code" == "404" ]; then
+              echo "FAIL: $path must not be edge-blocked, got 404"
+              fail=1
+            fi
+          done
+          docker rm -f nginx-smoke > /dev/null
+          exit $fail
+
   check-workflows:
     permissions:
       security-events: write
