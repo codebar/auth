@@ -21,7 +21,9 @@ test("OAuth Provider plugin tests", async (t) => {
 
     t.ok(client, "planner client exists");
     t.equal(client.clientId, "planner", "clientId is planner");
-    t.equal(client.public, true, "client is public");
+    t.notOk("public" in client, "legacy public column is not in the schema");
+    t.notOk("type" in client, "legacy type column is not in the schema");
+    t.equal(client.skipConsent, true, "consent is skipped");
     t.equal(client.requirePKCE, true, "PKCE is required");
     t.equal(
       client.tokenEndpointAuthMethod,

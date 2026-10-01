@@ -5,8 +5,6 @@
  * first-party client row via raw SQL.
  */
 
-// ponytail: raw SQL because Better Auth doesn't expose a public API to
-// create OAuth clients without admin auth. If the schema changes, update here.
 export async function seedPlannerClient(db, redirectUris, schemaName) {
   const uris = Array.isArray(redirectUris) ? redirectUris : [redirectUris];
   // Validate schemaName to prevent SQL injection — only alphanumeric + underscore
@@ -20,11 +18,11 @@ export async function seedPlannerClient(db, redirectUris, schemaName) {
   const sql = `INSERT INTO ${table} (
     id, "clientId", "clientSecret", name, "redirectUris",
     "grantTypes", "responseTypes", "tokenEndpointAuthMethod",
-    "public", "skipConsent", "requirePKCE", "createdAt", "updatedAt"
+    "skipConsent", "requirePKCE", "createdAt", "updatedAt"
   ) VALUES (
     'planner-seed', 'planner', NULL, 'Codebar Planner',
     $1::jsonb, to_jsonb(ARRAY['authorization_code']),
-    to_jsonb(ARRAY['code']), 'none', true, true, true,
+    to_jsonb(ARRAY['code']), 'none', true, true,
     NOW(), NOW()
   )
   ON CONFLICT ("clientId") DO UPDATE SET "redirectUris" = $1::jsonb`;
