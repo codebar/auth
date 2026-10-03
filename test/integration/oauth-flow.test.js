@@ -3,7 +3,7 @@ import { getTestInstance } from "../helpers/test-instance.js";
 import { createApp } from "../../src/app/app.js";
 
 test("end-to-end OAuth 2.1 flow", async (t) => {
-  const testInstance = await getTestInstance();
+  const testInstance = await getTestInstance(t);
   const app = createApp(testInstance.auth, testInstance.db);
   const { getAuthHeaders } = testInstance;
 
@@ -21,7 +21,7 @@ test("end-to-end OAuth 2.1 flow", async (t) => {
     redirect_uri: "http://localhost:3000/auth/codebar/callback",
     response_type: "code",
     state: "integration-state",
-    scope: "openid profile",
+    scope: "openid profile email",
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
   });
@@ -97,6 +97,25 @@ test("end-to-end OAuth 2.1 flow", async (t) => {
   t.ok(payload.aud, "payload has audience");
   t.ok(payload.iat, "payload has issued-at");
   t.ok(payload.exp, "payload has expiration");
+
+  // The planner resolves members by the id_token email claim. When the claim
+  // is missing it falls back to `sub` (the better-auth user id), which creates
+  // a duplicate planner member keyed by an opaque id.
+  const userRow = await testInstance.pool.query(
+    'SELECT email, name FROM "user" WHERE email = $1',
+    [email],
+  );
+  t.equal(userRow.rows.length, 1, "test user exists");
+  t.equal(
+    payload.email,
+    userRow.rows[0].email,
+    "payload carries the user's email claim",
+  );
+  t.equal(
+    payload.name,
+    userRow.rows[0].name,
+    "payload carries the user's name claim",
+  );
 
   // Step 5: Verify the access token is usable (e.g., for userinfo if we had one)
   // Note: introspection requires client authentication, which is skipped here

@@ -1,5 +1,8 @@
 import { test } from "tap";
-import { getGithubAccountId } from "../../src/auth/id-token-claims.js";
+import {
+  getGithubAccountId,
+  plannerIdTokenClaims,
+} from "../../src/auth/id-token-claims.js";
 
 function makeDb(rows) {
   return {
@@ -33,4 +36,35 @@ test("propagates database errors instead of swallowing them", async (t) => {
     { message: "connection lost" },
     "database error is propagated",
   );
+});
+
+test("claims carry the user-record email and name", async (t) => {
+  const claims = plannerIdTokenClaims(makeDb([]));
+  const result = await claims({
+    user: { id: "user-1", email: "ada@example.com", name: "Ada" },
+  });
+
+  t.same(result, { email: "ada@example.com", name: "Ada" });
+});
+
+test("claims add github_id for a linked GitHub account", async (t) => {
+  const claims = plannerIdTokenClaims(makeDb([{ accountId: "12345" }]));
+  const result = await claims({
+    user: { id: "user-1", email: "ada@example.com", name: "Ada" },
+  });
+
+  t.same(result, {
+    email: "ada@example.com",
+    name: "Ada",
+    github_id: "12345",
+  });
+});
+
+test("claims omit github_id without a linked GitHub account", async (t) => {
+  const claims = plannerIdTokenClaims(makeDb([]));
+  const result = await claims({
+    user: { id: "user-1", email: "ada@example.com", name: "Ada" },
+  });
+
+  t.notOk(Object.prototype.hasOwnProperty.call(result, "github_id"));
 });

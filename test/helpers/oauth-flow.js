@@ -9,7 +9,7 @@ export function authorizeParams(overrides = {}) {
     client_id: "planner",
     redirect_uri: REDIRECT_URI,
     response_type: "code",
-    scope: "openid profile",
+    scope: "openid profile email",
     code_challenge: CODE_CHALLENGE,
     code_challenge_method: "S256",
     ...overrides,

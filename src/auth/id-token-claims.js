@@ -17,3 +17,20 @@ export async function getGithubAccountId(db, userId) {
 
   return result.rows[0]?.accountId ?? null;
 }
+
+/**
+ * Build the `customIdTokenClaims` hook shared by the app and the tests.
+ *
+ * Every id_token carries the user-record `email` and `name` claims: the
+ * planner resolves members by `email` and falls back to `sub` (the
+ * better-auth user id) when the claim is absent, which keys a duplicate
+ * member. `github_id` is added for linked accounts so returning members
+ * resolve even when their GitHub email diverges from the stored one.
+ */
+export function plannerIdTokenClaims(db) {
+  return async ({ user }) => {
+    const claims = { email: user.email, name: user.name };
+    const githubId = await getGithubAccountId(db, user.id);
+    return githubId ? { ...claims, github_id: String(githubId) } : claims;
+  };
+}

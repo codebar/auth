@@ -21,7 +21,7 @@ test("id_token includes github_id for users with a linked GitHub account", async
   const authHeaders = await getAuthHeaders(email);
 
   const userResult = await testInstance.db.query(
-    'SELECT id FROM "user" WHERE email = $1',
+    'SELECT id, email, name FROM "user" WHERE email = $1',
     [email],
   );
   const userId = userResult.rows[0]?.id;
@@ -47,6 +47,16 @@ test("id_token includes github_id for users with a linked GitHub account", async
 
   const payload = decodeJwtPayload(body.id_token);
   t.equal(payload.github_id, "987654321", "payload includes linked github_id");
+  t.equal(
+    payload.email,
+    userResult.rows[0].email,
+    "payload carries the user's email claim",
+  );
+  t.equal(
+    payload.name,
+    userResult.rows[0].name,
+    "payload carries the user's name claim",
+  );
 });
 
 test("id_token omits github_id for users without a linked GitHub account", async (t) => {
