@@ -50,11 +50,11 @@ export const auth = betterAuth({
   telemetry: {
     enabled: false,
   },
-  // ponytail: the database strategy's extra signed state cookie check is
-  // redundant — the state is already validated against the `verification`
-  // table. Cloudflare strips `__Secure-` prefix cookies on ingress, so the
-  // cookie fails on the GitHub OAuth callback redirect. skipStateCookieCheck
-  // skips this check. Better Auth's own oauth-proxy plugin does the same.
+  // The database strategy's extra signed state cookie check is redundant:
+  // the state is already validated against the `verification` table.
+  // Cloudflare strips `__Secure-` prefix cookies on ingress, so the cookie
+  // fails on the GitHub OAuth callback redirect. skipStateCookieCheck skips
+  // this check. Better Auth's own oauth-proxy plugin does the same.
   account: {
     skipStateCookieCheck: true,
   },
