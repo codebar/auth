@@ -5,12 +5,18 @@ import { createApp } from "../../src/app/app.js";
 test("end-to-end OAuth 2.1 flow", async (t) => {
   const testInstance = await getTestInstance();
   const app = createApp(testInstance.auth, testInstance.db);
-  const { getAuthHeaders } = testInstance;
+  const { getAuthHeaders, pool } = testInstance;
 
   // Step 1: Authenticate a user via magic link
   const email = "oauth-integration@example.com";
   const { cookie: sessionCookie } = await getAuthHeaders(email);
   t.ok(sessionCookie, "session token extracted");
+
+  // Give the user a display name so the `name` claim has a real value to assert
+  await pool.query('UPDATE "user" SET name = $1 WHERE email = $2', [
+    "Ada Lovelace",
+    email,
+  ]);
 
   // Step 2: Call authorize endpoint with PKCE
   const codeVerifier = "test-verifier-123456789";
@@ -21,7 +27,7 @@ test("end-to-end OAuth 2.1 flow", async (t) => {
     redirect_uri: "http://localhost:3000/auth/codebar/callback",
     response_type: "code",
     state: "integration-state",
-    scope: "openid profile",
+    scope: "openid profile email",
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
   });
@@ -98,7 +104,20 @@ test("end-to-end OAuth 2.1 flow", async (t) => {
   t.ok(payload.iat, "payload has issued-at");
   t.ok(payload.exp, "payload has expiration");
 
-  // Step 5: Verify the access token is usable (e.g., for userinfo if we had one)
-  // Note: introspection requires client authentication, which is skipped here
-  // since the core flow (authorize -> code -> token -> JWT) is fully validated.
+  // Step 5: Fetch the OIDC UserInfo response. Since better-auth 1.7 the id_token
+  // is sparse and the scope-gated claims (email, name) live here, which is where
+  // the planner resolves member identity from.
+  const userinfoRes = await app.request("/api/auth/oauth2/userinfo", {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  });
+
+  t.equal(userinfoRes.status, 200, "userinfo endpoint returns 200");
+
+  const userinfo = await userinfoRes.json();
+  t.equal(userinfo.sub, payload.sub, "userinfo sub matches the id_token sub");
+  t.equal(userinfo.email, email, "userinfo carries the email claim");
+  t.equal(userinfo.email_verified, true, "userinfo carries email_verified");
+  t.equal(userinfo.name, "Ada Lovelace", "userinfo carries the name claim");
+
+  // Introspection is not covered here because it requires client authentication.
 });
