@@ -92,7 +92,7 @@ export async function getTestInstance(t) {
       }),
       oauthProvider({
         loginPage: "/login",
-        scopes: ["openid", "profile"],
+        scopes: ["openid", "profile", "email"],
         accessTokenExpiresIn: 900,
         validAudiences: ["planner"],
         allowDynamicClientRegistration: false,
