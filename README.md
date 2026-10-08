@@ -27,6 +27,19 @@ npm run db:migrate
 npm run dev
 ```
 
+### Intel Mac setup
+
+Apple Container requires Apple silicon, so on an Intel Mac use native PostgreSQL instead:
+
+```sh
+brew install postgresql
+brew services start postgresql
+"$(brew --prefix postgresql)/bin/psql" postgres -c "CREATE ROLE auth WITH LOGIN PASSWORD 'auth';"
+"$(brew --prefix postgresql)/bin/psql" postgres -c "CREATE DATABASE test OWNER auth;"
+```
+
+These credentials are for local development only; keep PostgreSQL bound to localhost and never reuse them for shared or production databases.
+
 ---
 
 View the application:
