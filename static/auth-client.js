@@ -1,5 +1,8 @@
 // TODO: we need a bundler, so we can re-use what we have in node_modules already
-import { createAuthClient } from "https://esm.sh/better-auth@latest/client";
+// Pinned to the server's better-auth version: the browser client must match
+// what the server runs. Update this pin whenever package-lock.json bumps
+// better-auth. No bundler yet — see TODO above.
+import { createAuthClient } from "https://esm.sh/better-auth@1.7.6/client";
 
 export const authClient = createAuthClient({
   baseURL: window.location.origin,
