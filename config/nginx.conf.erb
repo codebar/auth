@@ -57,6 +57,18 @@ http {
     server_name _;
     keepalive_timeout 5;
 
+    # Scanner junk: 404 at the edge. None of these are valid routes; the
+    # probes target codebar.io but wordlists don't discriminate.
+    # Sensitive or unknown file extensions, with /static excluded.
+    location ~* "^/(?!(?:static)(?:/|$))(?:[^/]+/)*[^/]*\.(?:json|js|yml|yaml|conf|env|pem|key|p12|pfx|crt|bak|sql|sqlite|db|tfstate|swp|old|zip|tar|gz|tgz|7z|php|cgi|asp|aspx|jsp)$|(?:[^/]+/)*\.env(?:\.[^/]*)?(?:$|/)|^/\.git(?:/|$)|^/\.aws(?:/|$)|^/\.ssh(?:/|$)" {
+      return 404;
+    }
+
+    # Extension-less probes seen in the logs.
+    location ~* "^/(?:__vite_rsc_findSourceMapURL|z9x8c7v6b5-debug-trigger-codebar\.io|debug-trigger|userfiles|wp-(?:json|content|admin|config|login|includes)|id_(?:rsa|dsa|ecdsa|ed25519)|private[-_]?key|backup|Dockerfile|__debug__)(?:$|/)" {
+      return 404;
+    }
+
     # Reject exploit bots
     if ($bad_bot) {
       return 444;
