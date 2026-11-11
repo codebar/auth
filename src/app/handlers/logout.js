@@ -16,6 +16,11 @@ export const logout = async (c) => {
     headers: c.req.raw.headers,
     asResponse: true,
   });
+  // asResponse makes better-auth return APIErrors instead of throwing them.
+  if (!signOut.ok) {
+    console.error(`Logout failed with status ${signOut.status}`);
+    return signOut;
+  }
 
   const response = c.redirect(callbackURL);
   for (const cookie of signOut.headers.getSetCookie()) {

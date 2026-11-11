@@ -156,3 +156,21 @@ test("logout clearing cookies keep their attributes", async (t) => {
     );
   }
 });
+
+test("logout surfaces a failed signOut instead of redirecting", async (t) => {
+  const auth = {
+    api: {
+      getSession: async () => null,
+      signOut: async () =>
+        new Response(JSON.stringify({ message: "signOut failed" }), {
+          status: 500,
+        }),
+    },
+  };
+  const app = createApp(auth, null);
+
+  const res = await app.request("/logout");
+
+  t.equal(res.status, 500, "propagates the signOut status");
+  t.equal(res.headers.get("location"), null, "does not redirect");
+});
