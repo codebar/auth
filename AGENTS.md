@@ -32,7 +32,6 @@ Authentication/profile prototype for Codebar using [Better Auth](https://www.bet
 3. For new setup:
    ```sh
    npm ci
-   npm run db:generate
    npm run db:migrate
    npm run dev
    ```
@@ -56,7 +55,6 @@ See [docs/heroku-setup.md](docs/heroku-setup.md) for initial Heroku setup and [d
 
 **Database:**
 
-- `npm run db:generate` - Generate Better Auth database schema
 - `npm run db:migrate` - Run database migrations
 - `rm auth.db` - Delete local database to start fresh
 

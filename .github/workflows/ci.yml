@@ -111,7 +111,6 @@ jobs:
         with:
           node-version-file: ".nvmrc"
       - run: npm ci
-      - run: npm run db:generate
       - run: npm run db:migrate
       - run: npm test -- --disable-coverage
 
@@ -149,9 +148,7 @@ jobs:
           node-version-file: ".nvmrc"
       - run: npm ci
       - run: npx playwright install chromium-headless-shell
-      - run: npm run db:generate
       - run: npm run db:migrate
-      - run: node scripts/migrate.js
       - run: |
           node src/index.js > server.log 2>&1 &
           for i in {1..30}; do

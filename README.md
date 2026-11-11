@@ -14,7 +14,6 @@ For a new run the following:
 
 ```sh
 npm ci
-npm run db:generate
 npm run db:migrate
 npm run dev
 ```
