@@ -1,6 +1,8 @@
 import { test } from "tap";
+import { Hono } from "hono";
 import { getTestInstance } from "../helpers/test-instance.js";
 import { createApp } from "../../src/app/app.js";
+import { forwardCookies } from "../../src/app/utils/cookies.js";
 import { authorizeParams } from "../helpers/oauth-flow.js";
 
 const SESSION_COOKIE = "better-auth.session_token";
@@ -155,4 +157,57 @@ test("logout clearing cookies keep their attributes", async (t) => {
       `${name} keeps SameSite=Lax`,
     );
   }
+});
+
+test("GET /logout clears every better-auth cookie", async (t) => {
+  const instance = await getTestInstance(t);
+  const app = createApp(instance.auth, instance.db);
+  const { cookie: sessionCookie } = await instance.getAuthHeaders(
+    "logout-get@example.com",
+  );
+
+  const res = await app.request("/logout", {
+    headers: { cookie: sessionCookie },
+  });
+
+  t.equal(res.status, 302, "redirects after logout");
+  const names = readSetCookie(res.headers)
+    .map((cookie) => cookie.split("=")[0])
+    .sort();
+  t.same(names, LOGOUT_COOKIES, "forwards one clearing cookie per cookie");
+});
+
+test("forwardCookies keeps a Set-Cookie already on the response", async (t) => {
+  const app = new Hono();
+  app.get("/forward", (c) => {
+    c.header("Set-Cookie", "existing=1; Path=/");
+    const headers = new Headers();
+    headers.append("set-cookie", "first=1; Path=/; HttpOnly");
+    headers.append("set-cookie", "second=2; Path=/; HttpOnly");
+    forwardCookies(headers, c);
+    return c.body(null);
+  });
+
+  const cookies = readSetCookie((await app.request("/forward")).headers);
+
+  t.equal(cookies.length, 3, "no header is replaced or duplicated");
+  t.match(cookies[0], /^existing=1/, "the existing cookie stays first");
+  t.match(cookies[1], /^first=1/, "the first forwarded cookie follows");
+  t.match(cookies[2], /^second=2/, "the second forwarded cookie follows");
+});
+
+test("logout redirects when signOut returns no headers", async (t) => {
+  const instance = await getTestInstance(t);
+  const auth = {
+    api: {
+      getSession: async () => null,
+      signOut: async () => ({}),
+    },
+  };
+  const app = createApp(auth, instance.db);
+
+  const res = await app.request("/logout");
+
+  t.equal(res.status, 302, "redirects despite the missing headers");
+  t.same(readSetCookie(res.headers), [], "sets no cookie");
 });
