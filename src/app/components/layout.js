@@ -44,10 +44,6 @@ export const Layout = ({ title, children, hideNav }) => html`
           : ""
       }
       <main class="container py-4">${children}</main>
-      <script
-        type="module"
-        src="/static/auth-client.js?v=${STATIC_VERSION}"
-      ></script>
       <script src="/static/bootstrap.bundle.min.js?v=${STATIC_VERSION}"></script>
     </body>
   </html>
