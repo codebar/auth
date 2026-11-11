@@ -6,7 +6,7 @@
   },
   "scripts": {
     "dev": "scripts/container.sh ensure && node --watch src/index.js",
-    "db:migrate": "node scripts/migrate.js",
+    "db:migrate": "scripts/container.sh ensure && node scripts/migrate.js",
     "fallow": "fallow",
     "prettier:check": "prettier --check '**/*.{js,css,md,yml}'",
     "prettier:write": "prettier --write '**/*.{js,css,md,yml}'",
