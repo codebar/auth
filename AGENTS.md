@@ -21,7 +21,7 @@ This installs Git hooks that run `lint-staged` on commit. To skip the hooks for 
 
 ## Project Overview
 
-Authentication/profile prototype for Codebar using [Better Auth](https://www.better-auth.com/). A Node.js application built with Hono framework, SQLite database, and Better Auth for authentication flows.
+Authentication service for Codebar using [Better Auth](https://www.better-auth.com/). A Node.js application built with Hono and PostgreSQL. It signs users in with GitHub OAuth or magic links, and acts as an OAuth 2.1 provider for the planner.
 
 ## Essential Setup
 
@@ -67,7 +67,7 @@ See [docs/heroku-setup.md](docs/heroku-setup.md) for initial Heroku setup and [d
 - `npm run prettier:check` - Check code formatting
 - `npm run prettier:write` - Auto-format code
 
-The application runs at http://localhost:3000
+The application runs at http://localhost:3001. Set `PORT` to override.
 
 ## Testing
 
@@ -76,46 +76,41 @@ The application runs at http://localhost:3000
 - `npm test` - Run all tests with coverage
 - `npm run test:coverage` - Run tests and view coverage report
 
+`pretest` starts the PostgreSQL container with `apple/container`, which is macOS-only. On Linux, start PostgreSQL yourself and run `npx tap` directly.
+
 **Expected Error Messages:**
 
-During test execution, you will see ERROR messages in stderr. These are EXPECTED and do NOT indicate test failures:
+During test execution, you will see ERROR and WARN messages in stderr. These are EXPECTED and do NOT indicate test failures:
 
-- `INTERNAL_SERVER_ERROR SqliteError: no such table: session` - Occurs when tests intentionally provide invalid session tokens to verify error handling
+- `WARN [Better Auth]: Social provider github is missing clientId or clientSecret` - Test instances use placeholder credentials
+- `ERROR [Better Auth]: Database schema mismatch`, followed by a list of missing tables - Better Auth checks the schema when the instance is created, before the test's migrations run
 
-These errors are logged by Better Auth's internal error handling when tests verify that the application correctly handles error conditions (redirecting to login, etc.). Tests pass if assertions succeed - ignore these stderr messages.
+These are logged by Better Auth's internal error handling. Tests pass if assertions succeed.
 
 **Test Structure:**
 
-- `test/` - Test files organized by feature/functionality
+- `test/` - Test files organized by kind
 - `test/helpers/` - Shared test utilities and fixtures
-  - `test-instance.js` - Creates isolated auth instances for testing
-  - `app.js` - Helper functions for app testing
+  - `test-instance.js` - Creates an isolated auth instance per test, in its own PostgreSQL schema
+  - `oauth-flow.js` - Authorize and token request helpers for the OAuth provider tests
+  - `container.js` - Starts the local PostgreSQL container before the suite runs
 
 **Test Files:**
 
-- `test/auth/` - Better Auth integration tests
-- `test/routes/` - Route handler tests (home, profile, auth, admin, whoami)
-- `test/components/` - HTML component rendering tests
+- `test/features/` - End-to-end feature tests (admin, authentication, health, home, magic links, OAuth provider, profile)
+- `test/integration/` - Multi-step flows (OAuth round trip, JWT payload, cookie attributes)
+- `test/unit/` - Single-module tests (callback URLs, redirects, ID token claims, magic link email)
 
 **Writing Tests:**
 
-1. Use Node's built-in `test()` and `t.test()` functions from the `node:test` module
-2. Use Node's `assert` module for assertions
-3. Use `getTestInstance()` from `test/helpers/test-instance.js` to create isolated test auth instances
-4. Each test file should be independent and can run in any order
-5. Clean up resources (database files) in test teardown
+1. Use `test()` and `t.test()` from the `tap` module
+2. Assert with tap's `t.equal`, `t.same`, `t.ok` and `t.match`
+3. Use `getTestInstance(t)` from `test/helpers/test-instance.js` to create an isolated auth instance; passing `t` registers teardown that drops the schema
+4. Each test file must be independent and runnable in any order
 
-**Coverage Requirements:**
+**Coverage:**
 
-- Statements: 67%+ coverage
-- Branches: 74%+ coverage
-- Functions: 88%+ coverage
-- Lines: 67%+ coverage
-
-**Current Test Suite:**
-
-- 38 passing feature tests
-- Coverage: 67.23% statements, 74.13% branches, 88.88% functions, 67.23% lines
+`.taprc` sets `allow-incomplete-coverage: true`, so the suite enforces no coverage threshold. `npm run test:coverage` writes an HTML report.
 
 ## Git Workflow
 
@@ -189,15 +184,18 @@ Use `elements-of-style:writing-clearly-and-concisely` skill when writing:
 ```
 src/
 ├── index.js          # Entry point, server setup with graceful shutdown
+├── auth.js           # Better Auth configuration and PostgreSQL pool
+├── config.js         # Application configuration
 ├── app/
 │   ├── app.js        # Main Hono app setup, middleware, route registration
-│   ├── routes/       # Route handlers (auth, home, profile, admin, whoami)
+│   ├── routes/       # Route handlers (auth, home, profile, admin, whoami, health)
 │   ├── components/   # HTML rendering functions
 │   ├── handlers/     # Business logic handlers (e.g., logout)
-│   ├── utils/        # Utilities (cookies, links, redirects)
+│   ├── utils/        # Utilities (cookies, redirects, magic link email)
+│   ├── db/           # Planner OAuth client seeding
 │   └── demo/         # Demo application showing auth integration
-auth.js               # Better Auth configuration
-config.js             # Application configuration
+├── auth/             # GitHub provider and ID token claim helpers
+└── dev/              # Dev-only magic link capture
 static/
 └── auth-client.js    # Browser-side auth client
 ```
@@ -206,10 +204,10 @@ static/
 
 **Better Auth Integration:**
 
-- `auth.js` exports a configured Better Auth instance with dual database support (SQLite for local/tests, PostgreSQL for CI/production)
-- API routes mounted at `/api/auth/*` in `app.js` (line 38-40)
-- Session middleware runs on all routes, populating `c.user` and `c.session` (app.js:43-60)
-- Plugins: magic links (log to console), admin
+- `src/auth.js` exports a configured Better Auth instance backed by a PostgreSQL pool
+- API routes mounted at `/api/auth/*` (app.js:69-71), with the discovery documents at `/.well-known/oauth-authorization-server` and `/.well-known/openid-configuration` (app.js:73-78)
+- Session middleware runs on all routes, populating `c.get('user')` and `c.get('session')` (app.js:84-100)
+- Plugins: JWT, OAuth provider, magic links, admin
 
 **Hono Framework:**
 
@@ -219,50 +217,57 @@ static/
 - Pino logger middleware with sensitive data redaction
 
 **Authentication Flows:**
-The app supports two authentication methods:
+The app supports three ways to authenticate:
 
-- GitHub OAuth (configured in auth.js:46-49)
-- Magic links (URLs logged to console, see auth.js:59-68)
+- GitHub OAuth (auth.js:36-49), with `getUserInfo` resolving the primary verified email
+- Magic links (auth.js:91-138), logged to the console outside production and sent through SendGrid in production
+- OAuth 2.1 provider for the planner (auth.js:80-90), issuing ID tokens with a `github_id` claim
 
 **Database:**
 
-- Local development: SQLite file at `./auth.db`
-- CI and production: PostgreSQL (via `DATABASE_URL` environment variable)
-- Database type detection based on connection string (starts with `postgres://`)
-- Better Auth handles schema management via Kysely adapter
+- PostgreSQL everywhere: local development, tests, CI and production
+- Local development and tests use the container on port 5433 (`scripts/container.sh`)
+- `DATABASE_URL` defaults to `postgres://auth:auth@localhost:5433/test`
+- SSL is enabled for any non-local connection
+- Better Auth manages the schema through its Kysely adapter
 
 ### Important Configuration
 
 **Environment Variables:**
 
-- `PORT` - Server port (default: 3000)
-- `DATABASE_URL` - Database connection (default: ./auth.db for SQLite, or postgres:// URL for PostgreSQL)
+- `PORT` - Server port (default: 3001)
+- `DATABASE_URL` - PostgreSQL connection (default: `postgres://auth:auth@localhost:5433/test`)
 - `GITHUB_CLIENT_ID` - GitHub OAuth client ID (required)
 - `GITHUB_CLIENT_SECRET` - GitHub OAuth secret (required)
+- `CODEBAR_AUTH_URL` - Public base URL of this service (default: `http://localhost:3001`)
+- `PLANNER_URL` - Planner base URL (default: `http://localhost:3000`)
+- `PLANNER_REDIRECT_URIS` - Comma-separated callback URLs allowed for the planner client
+- `SENDGRID_API_KEY` - SendGrid key used to send magic links in production
+- `MAGIC_LINK_FROM_EMAIL` - Sender address (default: `auth-noreply@codebar.io`)
+- `AUTH_TEST_PG_*` - Host, port, database, user and password for the test PostgreSQL instance
 
 **Allowed Redirects:**
 
-- Configured in `config.js:6`
-- Currently whitelist: `["http://localhost:3000/demo"]`
-- Expand this array to allow redirects to other origins
+- `config.js` builds `allowed_redirects` from `PLANNER_REDIRECT_URIS`
+- The default is `http://localhost:3000/auth/codebar/callback`
+- Add an entry to allow redirects to another origin
 
 **Session Configuration:**
 
-- 7-day expiration (auth.js:41)
-- Updates every 24 hours (auth.js:42)
+- 7-day expiration and a 24-hour update interval (auth.js:61-64)
 
 ### Demo Application
 
-A separate demo app is mounted at `/demo` to demonstrate cross-application authentication patterns. Access it at http://localhost:3000/demo after logging in.
+A separate demo app is mounted at `/demo` to demonstrate cross-application authentication patterns. Access it at http://localhost:3001/demo after logging in.
 
 ### Admin UI
 
-Basic admin interface at `/admin` for user management (list users, update roles). The admin plugin is configured in auth.js:56-58.
+Basic admin interface at `/admin` for user management (list users, update roles). The admin plugin is configured in src/auth.js:139.
 
 ## Development Notes
 
 **Magic Links:**
-Magic link URLs are logged to the console since there's no email sending configured. Check the terminal output for the authentication URL.
+Outside production, magic link URLs are logged to the console and captured in `src/dev/magic-links.js`. The dev-only `/api/test/magic-links` route returns them, and only answers requests from loopback. In production they are sent through SendGrid.
 
 **Graceful Shutdown:**
-The server handles SIGINT and SIGTERM for clean shutdowns (src/index.js:16-28).
+The server closes the database pool and the listener on SIGINT and SIGTERM (src/index.js:28-57).
