@@ -55,10 +55,10 @@ See [docs/heroku-setup.md](docs/heroku-setup.md) for initial Heroku setup and [d
 
 **Database:**
 
-- `npm run db:migrate` - Run database migrations
-- `rm auth.db` - Delete local database to start fresh
+- `npm run db:migrate` - Run database migrations and seed the planner OAuth client
+- `scripts/container.sh destroy` - Delete the local Postgres container and its data to start fresh
 
-**Local development uses SQLite** (`./auth.db` file). No database server needed.
+**Local development and tests use a Postgres container** (`scripts/container.sh`, port 5433, started by `npm run dev` and `pretest`).
 **CI and production use PostgreSQL** (configured via `DATABASE_URL` environment variable).
 
 **Code quality:**
