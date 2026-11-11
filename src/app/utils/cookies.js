@@ -2,6 +2,6 @@
 export const forwardCookies = (headers, c) => {
   const setCookieHeaders = headers.getSetCookie?.() || [];
   setCookieHeaders.forEach((cookie) => {
-    c.header("Set-Cookie", cookie);
+    c.header("Set-Cookie", cookie, { append: true });
   });
 };
