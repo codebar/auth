@@ -1,5 +1,4 @@
 import { validateRedirectUrl } from "../utils/redirect.js";
-import { forwardCookies } from "../utils/cookies.js";
 import { getAuthFromContext } from "../utils/auth.js";
 
 /**
@@ -13,14 +12,15 @@ export const logout = async (c) => {
     c.req.query("redirect_url"),
     "/?message=Bye!",
   );
-  const status = await auth.api.signOut({
+  const signOut = await auth.api.signOut({
     headers: c.req.raw.headers,
-    returnHeaders: true,
+    asResponse: true,
   });
-  // forward headers (cookies)
-  if (status.headers) {
-    forwardCookies(status.headers, c);
+
+  const response = c.redirect(callbackURL);
+  for (const cookie of signOut.headers.getSetCookie()) {
+    response.headers.append("Set-Cookie", cookie);
   }
 
-  return c.redirect(callbackURL);
+  return response;
 };
