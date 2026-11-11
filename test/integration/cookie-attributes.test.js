@@ -19,8 +19,9 @@ function readSetCookie(headers) {
     return value ? [value] : [];
   }
   if (Array.isArray(headers)) {
-    const entry = headers.find(([name]) => name.toLowerCase() === "set-cookie");
-    return entry ? [entry[1]] : [];
+    return headers
+      .filter(([name]) => name.toLowerCase() === "set-cookie")
+      .map(([, value]) => value);
   }
   return [];
 }
@@ -66,8 +67,13 @@ async function magicLinkHeaders(auth, getMagicLinks, email) {
     });
     return result.headers;
   } catch (error) {
-    if (error.statusCode === 302) return error.headers;
-    throw error;
+    if (error.statusCode !== 302) throw error;
+    if (!error.headers) {
+      throw new Error("magicLinkVerify redirected without headers", {
+        cause: error,
+      });
+    }
+    return error.headers;
   }
 }
 
