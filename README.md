@@ -44,21 +44,21 @@ These credentials are for local development only; keep PostgreSQL bound to local
 View the application:
 
 ```sh
-open http://localhost:3000
+open http://localhost:3001
 ```
 
 ### Context
 
-- data is saved in a sqlite database
-- the app currently supports username/password, magic-link and GitHub OAuth
+- data is saved in PostgreSQL
+- the app supports magic-link and GitHub OAuth
 - for magic-link, **inspect the log to fetch the URL**
 
 ## What's happening here?
 
-Once the application is running, you can try out the the following flows:
+Once the application is running, you can try out the following flows:
 
-- sign-up
-- sign-in (username/password, GitHub OAuth, magic-link)
+- sign-in with a magic link
+- sign-in with GitHub OAuth
 
 In addition `/admin` hosts a very basic admin ui (list user, update roles).
 
@@ -67,5 +67,5 @@ In addition `/admin` hosts a very basic admin ui (list user, update roles).
 There's an additional application (mounted in this setup), that would demonstrate how to determine if a user is logged in.
 
 ```sh
-open http://localhost:3000/demo
+open http://localhost:3001/demo
 ```
