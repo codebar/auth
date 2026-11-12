@@ -191,7 +191,7 @@ src/
 │   ├── routes/       # Route handlers (auth, home, profile, admin, whoami, health)
 │   ├── components/   # HTML rendering functions
 │   ├── handlers/     # Business logic handlers (e.g., logout)
-│   ├── utils/        # Utilities (cookies, redirects, magic link email)
+│   ├── utils/        # Utilities (redirects, magic link email)
 │   ├── db/           # Planner OAuth client seeding
 │   └── demo/         # Demo application showing auth integration
 ├── auth/             # GitHub provider and ID token claim helpers
