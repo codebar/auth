@@ -1,6 +1,13 @@
 import { test } from "tap";
-import { getTestInstance } from "../helpers/test-instance.js";
+import {
+  getTestInstance,
+  magicLinkVerifyHeaders,
+} from "../helpers/test-instance.js";
 import { createApp } from "../../src/app/app.js";
+import { authorizeParams } from "../helpers/oauth-flow.js";
+
+const SESSION_COOKIE = "better-auth.session_token";
+
 const LOGOUT_COOKIES = [
   "better-auth.dont_remember",
   "better-auth.session_data",
@@ -22,6 +29,10 @@ function readSetCookie(headers) {
   return [];
 }
 
+function cookieNamed(headers, name) {
+  return readSetCookie(headers).find((cookie) => cookie.startsWith(`${name}=`));
+}
+
 function attributes(cookie) {
   return cookie
     .split(";")
@@ -35,6 +46,46 @@ function attributeValue(cookie, name) {
   );
   return part?.split("=").slice(1).join("=");
 }
+
+function hasLifetime(cookie) {
+  return Boolean(
+    attributeValue(cookie, "Max-Age") || attributeValue(cookie, "Expires"),
+  );
+}
+
+test("session cookie keeps its security attributes on magic-link verification", async (t) => {
+  const instance = await getTestInstance(t);
+  const headers = await magicLinkVerifyHeaders(
+    instance.auth,
+    instance.getMagicLinks(),
+    "cookie-attributes@example.com",
+  );
+  const cookie = cookieNamed(headers, SESSION_COOKIE);
+
+  t.ok(cookie, "session cookie is set");
+  t.equal(attributeValue(cookie, "HttpOnly"), "", "HttpOnly is set");
+  t.equal(attributeValue(cookie, "SameSite"), "Lax", "SameSite=Lax is set");
+  t.equal(attributeValue(cookie, "Path"), "/", "Path=/ is set");
+  t.ok(hasLifetime(cookie), "session cookie has a lifetime");
+});
+
+test("authorize response sets no cookie", async (t) => {
+  const instance = await getTestInstance(t);
+  const app = createApp(instance.auth, instance.db);
+  const { cookie: sessionCookie } = await instance.getAuthHeaders(
+    "authorize-cookie@example.com",
+  );
+
+  // OAuth state travels in a signed query string (sig=), not in a cookie.
+  const params = authorizeParams({ state: "authorize-cookie" });
+  const res = await app.request(
+    `/api/auth/oauth2/authorize?${params.toString()}`,
+    { headers: { cookie: sessionCookie } },
+  );
+
+  t.equal(res.status, 302, "authorize redirects to the callback");
+  t.same(readSetCookie(res.headers), [], "no cookie is set");
+});
 
 test("logout clears every better-auth cookie", async (t) => {
   const instance = await getTestInstance(t);
