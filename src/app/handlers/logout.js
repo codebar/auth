@@ -22,10 +22,9 @@ export const logout = async (c) => {
     return signOut;
   }
 
-  const response = c.redirect(callbackURL);
   for (const cookie of signOut.headers.getSetCookie()) {
-    response.headers.append("Set-Cookie", cookie);
+    c.header("Set-Cookie", cookie, { append: true });
   }
 
-  return response;
+  return c.redirect(callbackURL);
 };
