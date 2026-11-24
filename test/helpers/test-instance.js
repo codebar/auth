@@ -178,49 +178,9 @@ function createTestClient(pool) {
  */
 function createGetAuthHeaders(auth, magicLinksStore) {
   return async function getAuthHeaders(email) {
-    // Send magic link
-    await auth.api.signInMagicLink({
-      body: {
-        email,
-        callbackURL: "http://localhost:3000/profile",
-      },
-      headers: new Headers(),
-    });
+    const headers = await magicLinkVerifyHeaders(auth, magicLinksStore, email);
+    const setCookie = setCookieHeader(headers);
 
-    // Get the magic link from the test array
-    const magicLink = magicLinksStore.find((link) => link.email === email);
-
-    if (!magicLink) {
-      throw new Error(`No magic link found for ${email}`);
-    }
-
-    // Verify the magic link to get a session
-    let result;
-    try {
-      result = await auth.api.magicLinkVerify({
-        query: {
-          token: magicLink.token,
-          callbackURL: "http://localhost:3000/profile",
-        },
-        headers: new Headers(),
-        returnHeaders: true,
-      });
-    } catch (error) {
-      // magicLinkVerify may throw an APIError with the redirect response
-      const cookieFromError = extractCookieFromError(error);
-      if (cookieFromError) {
-        return cookieFromError;
-      }
-      throw new Error(`Magic link verification failed: ${error.message}`, {
-        cause: error,
-      });
-    }
-
-    if (!result.headers) {
-      throw new Error("No headers returned from magic link verification");
-    }
-
-    const setCookie = result.headers.get("set-cookie");
     if (!setCookie) {
       throw new Error("No session cookie in magic link verification response");
     }
@@ -230,31 +190,64 @@ function createGetAuthHeaders(auth, magicLinksStore) {
 }
 
 /**
- * Extract session cookie from a 302 redirect error response
- * @param {Error} error - The error thrown by magicLinkVerify
- * @returns {{cookie: string}|null} Session cookie object or null if not found
+ * Verify a magic link and return the headers carrying the session cookie.
+ *
+ * Better Auth returns those headers as a Headers object on success and may
+ * throw an APIError with them as an array of pairs on the redirect path.
+ * Both shapes reach this function until the API stabilises.
+ * @param {Object} auth - Better Auth instance
+ * @param {Array} magicLinksStore - Array storing captured magic links
+ * @param {string} email - Address to sign in
+ * @returns {Headers|Array} Response headers
  */
-function extractCookieFromError(error) {
-  if (error.statusCode !== 302) {
-    return null;
+export async function magicLinkVerifyHeaders(auth, magicLinksStore, email) {
+  const callbackURL = "http://localhost:3000/profile";
+  await auth.api.signInMagicLink({
+    body: { email, callbackURL },
+    headers: new Headers(),
+  });
+
+  const magicLink = magicLinksStore.find((link) => link.email === email);
+
+  if (!magicLink) {
+    throw new Error(`No magic link found for ${email}`);
   }
 
-  // ponytail: Better Auth returns headers in two shapes (Headers object vs
-  // array) depending on the error path. Handle both until the API stabilises.
-  let setCookie;
-  if (error.headers && typeof error.headers.get === "function") {
-    setCookie = error.headers.get("set-cookie");
-  } else if (error.headers && Array.isArray(error.headers)) {
-    const setCookieHeader = error.headers.find(
-      (h) => h[0].toLowerCase() === "set-cookie",
-    );
-    setCookie = setCookieHeader ? setCookieHeader[1] : null;
-  }
+  try {
+    const result = await auth.api.magicLinkVerify({
+      query: { token: magicLink.token, callbackURL },
+      headers: new Headers(),
+      returnHeaders: true,
+    });
 
-  if (setCookie) {
-    return parseSessionCookie(setCookie);
-  }
+    if (!result.headers) {
+      throw new Error("No headers returned from magic link verification");
+    }
 
+    return result.headers;
+  } catch (error) {
+    if (error.statusCode !== 302) throw error;
+    if (!error.headers) {
+      throw new Error("magicLinkVerify redirected without headers", {
+        cause: error,
+      });
+    }
+    return error.headers;
+  }
+}
+
+/**
+ * Read the set-cookie header from either shape Better Auth returns
+ * @param {Headers|Array} headers - Response headers
+ * @returns {string|null} The set-cookie header value
+ */
+function setCookieHeader(headers) {
+  if (!headers) return null;
+  if (typeof headers.get === "function") return headers.get("set-cookie");
+  if (Array.isArray(headers)) {
+    const found = headers.find(([name]) => name.toLowerCase() === "set-cookie");
+    return found ? found[1] : null;
+  }
   return null;
 }
 

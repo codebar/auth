@@ -1,5 +1,4 @@
 import { validateRedirectUrl } from "../utils/redirect.js";
-import { forwardCookies } from "../utils/cookies.js";
 import { getAuthFromContext } from "../utils/auth.js";
 
 /**
@@ -13,13 +12,18 @@ export const logout = async (c) => {
     c.req.query("redirect_url"),
     "/?message=Bye!",
   );
-  const status = await auth.api.signOut({
+  const signOut = await auth.api.signOut({
     headers: c.req.raw.headers,
-    returnHeaders: true,
+    asResponse: true,
   });
-  // forward headers (cookies)
-  if (status.headers) {
-    forwardCookies(status.headers, c);
+  // asResponse turns APIErrors into error responses; other errors still throw.
+  if (!signOut.ok) {
+    console.error(`Logout failed with status ${signOut.status}`);
+    return signOut;
+  }
+
+  for (const cookie of signOut.headers.getSetCookie()) {
+    c.header("Set-Cookie", cookie, { append: true });
   }
 
   return c.redirect(callbackURL);
