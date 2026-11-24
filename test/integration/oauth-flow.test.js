@@ -3,7 +3,7 @@ import { getTestInstance } from "../helpers/test-instance.js";
 import { createApp } from "../../src/app/app.js";
 
 test("end-to-end OAuth 2.1 flow", async (t) => {
-  const testInstance = await getTestInstance();
+  const testInstance = await getTestInstance(t);
   const app = createApp(testInstance.auth, testInstance.db);
   const { getAuthHeaders, pool } = testInstance;
 

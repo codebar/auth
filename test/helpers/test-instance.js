@@ -40,16 +40,33 @@ function getPoolConfig() {
 /**
  * Creates a Better Auth test instance with isolated PostgreSQL schema
  *
- * @param {Object} t - Tap test context (for auto-teardown via t.teardown())
+ * @param {Object} t - Tap test context, required: it registers the teardown that drops the schema
  * @returns {Promise<{auth: Object, pool: pg.Pool, client: Object, getAuthHeaders: Function, teardown: Function}>}
  */
 export async function getTestInstance(t) {
+  if (!t || typeof t.teardown !== "function") {
+    throw new Error(
+      "getTestInstance requires the tap context: it registers the teardown that drops the test schema",
+    );
+  }
+
   // Unique schema per test instance
   const schemaName = `test_${crypto.randomUUID().replace(/-/g, "_")}`;
 
   // Create a small pool for this test
   const poolConfig = getPoolConfig();
   const pool = new pg.Pool(poolConfig);
+
+  // Registered before the setup below, so a migration or seed failure still
+  // drops the schema instead of leaving it behind.
+  let cleanedUp = false;
+  const cleanup = async () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    await pool.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
+    await pool.end();
+  };
+  t.teardown(cleanup);
 
   // Create the schema and set search_path so Better Auth tables go here
   await pool.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
@@ -125,14 +142,6 @@ export async function getTestInstance(t) {
   const getAuthHeaders = createGetAuthHeaders(auth, magicLinksStore);
   const client = createTestClient(pool);
 
-  // Auto-teardown via tap context
-  if (t && typeof t.teardown === "function") {
-    t.teardown(async () => {
-      await pool.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
-      await pool.end();
-    });
-  }
-
   return {
     auth,
     db: pool,
@@ -140,14 +149,7 @@ export async function getTestInstance(t) {
     client,
     getAuthHeaders,
     getMagicLinks: () => magicLinksStore,
-    teardown: async () => {
-      try {
-        await pool.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
-      } catch {
-        // Ignore teardown errors
-      }
-      await pool.end();
-    },
+    teardown: cleanup,
   };
 }
 
