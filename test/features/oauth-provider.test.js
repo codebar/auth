@@ -41,7 +41,7 @@ test("OAuth Provider plugin tests", async (t) => {
   t.test(
     "authorize endpoint redirects unauthenticated users to login",
     async (t) => {
-      const testInstance = await getTestInstance();
+      const testInstance = await getTestInstance(t);
       const app = createApp(testInstance.auth, testInstance.db);
 
       const params = authorizeParams({ state: "test-state" });
@@ -60,7 +60,7 @@ test("OAuth Provider plugin tests", async (t) => {
   );
 
   t.test("authorize endpoint issues code when authenticated", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth, testInstance.db);
     const { getAuthHeaders } = testInstance;
 
@@ -87,7 +87,7 @@ test("OAuth Provider plugin tests", async (t) => {
   t.test(
     "token endpoint exchanges code for access token with PKCE",
     async (t) => {
-      const testInstance = await getTestInstance();
+      const testInstance = await getTestInstance(t);
       const app = createApp(testInstance.auth, testInstance.db);
       const { getAuthHeaders } = testInstance;
 
@@ -113,7 +113,7 @@ test("OAuth Provider plugin tests", async (t) => {
   );
 
   t.test("token endpoint rejects code without code_verifier", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth, testInstance.db);
     const { getAuthHeaders } = testInstance;
 
@@ -136,7 +136,7 @@ test("OAuth Provider plugin tests", async (t) => {
   });
 
   t.test("token endpoint rejects invalid code", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth, testInstance.db);
 
     const tokenRes = await app.request("/api/auth/oauth2/token", {
@@ -154,7 +154,7 @@ test("OAuth Provider plugin tests", async (t) => {
   });
 
   t.test("token endpoint rejects mismatched redirect_uri", async (t) => {
-    const testInstance = await getTestInstance();
+    const testInstance = await getTestInstance(t);
     const app = createApp(testInstance.auth, testInstance.db);
     const { getAuthHeaders } = testInstance;
 
